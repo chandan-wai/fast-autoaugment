@@ -57,7 +57,7 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
         max_value = max(value)
         epsilon = np.finfo(float).eps
         for idx, val in zip(indices, value):
-            dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+            dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
 
 def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, writer=None, verbose=1, scheduler=None, is_master=True, ema=None, wd=0.0, tqdm_disabled=False):
     if verbose:
@@ -398,16 +398,20 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     assert (args.only_eval and args.save) or not args.only_eval, 'checkpoint path not provided in evaluation mode.'
-
+    
+    save_path = C.get().conf['config'].replace('.yaml', '')
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    save_path = os.path.join(save_path, "test.pth")
     if not args.only_eval:
         if args.save:
-            logger.info('checkpoint will be saved at %s' % args.save)
+            logger.info('checkpoint will be saved at %s' % save_path)
         else:
             logger.warning('Provide --save argument to save the checkpoint. Without it, training result will not be saved!')
 
     import time
     t = time.time()
-    result = train_and_eval(args.tag, args.dataroot, test_ratio=args.cv_ratio, cv_fold=args.cv, save_path=args.save, only_eval=args.only_eval, local_rank=args.local_rank, metric='test', evaluation_interval=args.evaluation_interval)
+    result = train_and_eval(args.tag, args.dataroot, test_ratio=args.cv_ratio, cv_fold=args.cv, save_path=save_path, only_eval=args.only_eval, local_rank=args.local_rank, metric='test', evaluation_interval=args.evaluation_interval)
     elapsed = time.time() - t
 
     logger.info('done.')
