@@ -279,7 +279,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
             result['%s_%s' % (key, setname)] = rs[setname][key]
         result['epoch'] = 0
         return result
-#     import ipdb; ipdb.set_trace();
+
     if C.get().conf.get('hardness') is not None:
             if C.get()['hardness']['compute']:
                 hardness_measures = setup_hardness()
@@ -293,7 +293,6 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
         rs = dict()
         rs['train'] = run_epoch(model, trainloader, criterion, optimizer, desc_default='train', epoch=epoch, writer=writers[0], verbose=(is_master and local_rank <= 0), scheduler=scheduler, ema=ema, wd=C.get()['optimizer']['decay'], tqdm_disabled=tqdm_disabled)
         model.eval()
-#         import ipdb; ipdb.set_trace();
         
         if C.get().conf.get('hardness') is not None:
             if C.get()['hardness']['compute']:
@@ -319,7 +318,6 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                     
                     update_hardness(torch.cat(rs['hardness_run']['indices']), 
                                     hardness_scores, trainloader, torch.cat(rs['hardness_run']['labels']))
-                    import ipdb; ipdb.set_trace();
                     
         if math.isnan(rs['train']['loss']):
             raise Exception('train loss is NaN.')

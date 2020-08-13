@@ -194,9 +194,8 @@ def get_magnitude(name, hardness_score, low, high):
     min_aug = 1 - hardness_score ** (C.get()['hardness']['f_power'])  
     max_aug = 1 - hardness_score ** (C.get()['hardness']['g_power'])
     magnitude = random.uniform(min_aug, max_aug)
-    
     if name in ["Rotate", "ShearX", "ShearY", "TranslateX", "TranslateY", "TranslateXAbs", "TranslateYAbs", "Cutout", "CutoutAbs"]:
-        low = 0
+        low = 0.0
         magnitude = magnitude * (high - low) + low
     elif name in ["Posterize", "Posterize2", "Solarize"]:
         magnitude = high - magnitude * (high - low)
@@ -204,16 +203,14 @@ def get_magnitude(name, hardness_score, low, high):
         low = 0.0
         high = 0.9
         magnitude = magnitude * (high - low) + low
-        magnitude = 1 + magnitude * random.choice([-1, 1])
-    else:
-        print(name)
+        magnitude = round(1 + magnitude * random.choice([-1, 1]), 5)
+        
     return magnitude
 
 def apply_augment(img, name, level, hardness_score=None):
     augment_fn, low, high = get_augment(name)
     if hardness_score is not None:
         magnitude = get_magnitude(name, hardness_score, low, high)
-#         print(name, magnitude, hardness_score)
         return augment_fn(img.copy(), magnitude)
     return augment_fn(img.copy(), level * (high - low) + low)
 
