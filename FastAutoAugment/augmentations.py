@@ -189,15 +189,21 @@ def get_augment(name):
     return augment_dict[name]
 
 
-def get_magnitude(hardness_score, low, high):
-    min_aug = 1 - hardness_score ** (0.77)
-    max_aug = 1 - hardness_score ** (1.3)
+def get_magnitude(name, hardness_score, low, high):
+    if "Rotate" in name or "Shear" in name or "Translate" in name or Cutout in name:
+        min_aug = 1 - hardness_score ** (C.get()['hardness']['f_power'])
+        max_aug = 1 - hardness_score ** (C.get()['hardness']['g_power'])
+    elif "Posterize" in name or "Solarize" in name:
+        max_aug = hardness_score ** (C.get()['hardness']['f_power'])
+        min_aug = hardness_score ** (C.get()['hardness']['g_power'])
+    elif low == 0.1 and high == 1.9:
+        
     return random.uniform(min_aug, max_aug)
 
 def apply_augment(img, name, level, hardness_score=None):
     augment_fn, low, high = get_augment(name)
     if hardness_score is not None:
-        magnitude = get_magnitude(hardness_score, low, high)
+        magnitude = get_magnitude(name, hardness_score, low, high)
         return augment_fn(img.copy(), magnitude * (high - low) + low)
     return augment_fn(img.copy(), level * (high - low) + low)
 
