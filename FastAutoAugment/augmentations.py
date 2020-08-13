@@ -189,8 +189,16 @@ def get_augment(name):
     return augment_dict[name]
 
 
-def apply_augment(img, name, level):
+def get_magnitude(hardness_score, low, high):
+    min_aug = 1 - hardness_score ** (0.77)
+    max_aug = 1 - hardness_score ** (1.3)
+    return random.uniform(min_aug, max_aug)
+
+def apply_augment(img, name, level, hardness_score=None):
     augment_fn, low, high = get_augment(name)
+    if hardness_score is not None:
+        magnitude = get_magnitude(hardness_score, low, high)
+        return augment_fn(img.copy(), magnitude * (high - low) + low)
     return augment_fn(img.copy(), level * (high - low) + low)
 
 

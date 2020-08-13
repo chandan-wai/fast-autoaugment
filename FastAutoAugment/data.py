@@ -20,6 +20,7 @@ from FastAutoAugment.augmentations import *
 from FastAutoAugment.common import get_logger
 from FastAutoAugment.imagenet import ImageNet
 from FastAutoAugment.networks.efficientnet_pytorch.model import EfficientNet
+from FastAutoAugment.datasets import CIFAR10_mod
 
 logger = get_logger('Fast AutoAugment')
 logger.setLevel(logging.INFO)
@@ -112,10 +113,10 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         transform_train.transforms.append(CutoutDefault(C.get()['cutout']))
 
     if dataset == 'cifar10':
-        total_trainset = torchvision.datasets.CIFAR10(root=dataroot, train=True, download=True, transform=transform_train)
-        testset = torchvision.datasets.CIFAR10(root=dataroot, train=False, download=True, transform=transform_test)
+        total_trainset = CIFAR10_mod(root=dataroot, train=True, download=True, transform=transform_train)
+        testset = CIFAR10_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'reduced_cifar10':
-        total_trainset = torchvision.datasets.CIFAR10(root=dataroot, train=True, download=True, transform=transform_train)
+        total_trainset = CIFAR10_mod(root=dataroot, train=True, download=True, transform=transform_train)
         sss = StratifiedShuffleSplit(n_splits=1, test_size=46000, random_state=0)   # 4000 trainset
         sss = sss.split(list(range(len(total_trainset))), total_trainset.targets)
         train_idx, valid_idx = next(sss)
@@ -123,7 +124,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         total_trainset = Subset(total_trainset, train_idx)
         total_trainset.targets = targets
 
-        testset = torchvision.datasets.CIFAR10(root=dataroot, train=False, download=True, transform=transform_test)
+        testset = CIFAR10_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'cifar100':
         total_trainset = torchvision.datasets.CIFAR100(root=dataroot, train=True, download=True, transform=transform_train)
         testset = torchvision.datasets.CIFAR100(root=dataroot, train=False, download=True, transform=transform_test)
@@ -213,7 +214,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
 
     trainloader = torch.utils.data.DataLoader(
         total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, num_workers=8, pin_memory=True,
-        sampler=train_sampler, drop_last=True)
+        sampler=train_sampler, drop_last=False)
     validloader = torch.utils.data.DataLoader(
         total_trainset, batch_size=batch, shuffle=False, num_workers=4, pin_memory=True,
         sampler=valid_sampler, drop_last=False)
@@ -254,13 +255,18 @@ class Augmentation(object):
     def __init__(self, policies):
         self.policies = policies
 
-    def __call__(self, img):
+    def __call__(self, img, hardness_score=None):
         for _ in range(1):
             policy = random.choice(self.policies)
             for name, pr, level in policy:
                 if random.random() > pr:
                     continue
-                img = apply_augment(img, name, level)
+                if C.get()['hardness']['use']:
+                    assert hardness_score is not None
+                    score = hardness_score[C.get()['hardness']['aug_measure']]
+                    img = apply_augment(img, name, level, score)
+                else:
+                    img = apply_augment(img, name, level)
         return img
 
 
