@@ -6,6 +6,7 @@ import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
 import numpy as np
 import torch
 from torchvision.transforms.transforms import Compose
+from theconf import Config as C
 
 random_mirror = True
 
@@ -190,21 +191,30 @@ def get_augment(name):
 
 
 def get_magnitude(name, hardness_score, low, high):
-    if "Rotate" in name or "Shear" in name or "Translate" in name or Cutout in name:
-        min_aug = 1 - hardness_score ** (C.get()['hardness']['f_power'])
-        max_aug = 1 - hardness_score ** (C.get()['hardness']['g_power'])
-    elif "Posterize" in name or "Solarize" in name:
-        max_aug = hardness_score ** (C.get()['hardness']['f_power'])
-        min_aug = hardness_score ** (C.get()['hardness']['g_power'])
-    elif low == 0.1 and high == 1.9:
-        
-    return random.uniform(min_aug, max_aug)
+    min_aug = 1 - hardness_score ** (C.get()['hardness']['f_power'])  
+    max_aug = 1 - hardness_score ** (C.get()['hardness']['g_power'])
+    magnitude = random.uniform(min_aug, max_aug)
+    
+    if name in ["Rotate", "ShearX", "ShearY", "TranslateX", "TranslateY", "TranslateXAbs", "TranslateYAbs", "Cutout", "CutoutAbs"]:
+        low = 0
+        magnitude = magnitude * (high - low) + low
+    elif name in ["Posterize", "Posterize2", "Solarize"]:
+        magnitude = high - magnitude * (high - low)
+    elif name in ["Contrast", "Sharpness", "Brightness", "Color"]:
+        low = 0.0
+        high = 0.9
+        magnitude = magnitude * (high - low) + low
+        magnitude = 1 + magnitude * random.choice([-1, 1])
+    else:
+        print(name)
+    return magnitude
 
 def apply_augment(img, name, level, hardness_score=None):
     augment_fn, low, high = get_augment(name)
     if hardness_score is not None:
         magnitude = get_magnitude(name, hardness_score, low, high)
-        return augment_fn(img.copy(), magnitude * (high - low) + low)
+#         print(name, magnitude, hardness_score)
+        return augment_fn(img.copy(), magnitude)
     return augment_fn(img.copy(), level * (high - low) + low)
 
 

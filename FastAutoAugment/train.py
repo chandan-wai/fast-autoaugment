@@ -56,8 +56,8 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
         min_value = min(value)
         max_value = max(value)
         epsilon = np.finfo(float).eps
-        value = list(list(zip(*sorted(zip(indices, value))))[1])
-        dataloader.dataset.dataset.hardness_scores[key] = (value-min_value)/(max_value-min_value+epsilon) 
+        for idx, val in zip(indices, value):
+            dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
 
 def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, writer=None, verbose=1, scheduler=None, is_master=True, ema=None, wd=0.0, tqdm_disabled=False):
     if verbose:

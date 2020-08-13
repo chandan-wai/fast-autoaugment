@@ -263,8 +263,7 @@ class Augmentation(object):
                     continue
                 if C.get()['hardness']['use']:
                     assert hardness_score is not None
-                    score = hardness_score[C.get()['hardness']['aug_measure']]
-                    img = apply_augment(img, name, level, score)
+                    img = apply_augment(img, name, level, hardness_score)
                 else:
                     img = apply_augment(img, name, level)
         return img
