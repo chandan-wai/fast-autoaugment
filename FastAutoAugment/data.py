@@ -14,6 +14,7 @@ import torch.distributed as dist
 from torchvision.transforms import transforms
 from sklearn.model_selection import StratifiedShuffleSplit
 from theconf import Config as C
+import multiprocessing as mp
 
 from FastAutoAugment.archive import arsaug_policy, autoaug_policy, autoaug_paper_cifar10, fa_reduced_cifar10, fa_reduced_svhn, fa_resnet50_rimagenet
 from FastAutoAugment.augmentations import *
@@ -213,15 +214,15 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
             logger.info(f'----- dataset with DistributedSampler  {dist.get_rank()}/{dist.get_world_size()}')
 
     trainloader = torch.utils.data.DataLoader(
-        total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, num_workers=1, pin_memory=True,
-        sampler=train_sampler, drop_last=False)
+        total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, 
+        num_workers=mp.cpu_count(), pin_memory=True, sampler=train_sampler, drop_last=False)
     validloader = torch.utils.data.DataLoader(
-        total_trainset, batch_size=batch, shuffle=False, num_workers=1, pin_memory=True,
-        sampler=valid_sampler, drop_last=False)
+        total_trainset, batch_size=batch, shuffle=False, num_workers=mp.cpu_count(), 
+        pin_memory=True, sampler=valid_sampler, drop_last=False)
 
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch, shuffle=False, num_workers=1, pin_memory=True,
-        drop_last=False
+        testset, batch_size=batch, shuffle=False, num_workers=mp.cpu_count(), 
+        pin_memory=True, drop_last=False
     )
     return train_sampler, trainloader, validloader, testloader
 

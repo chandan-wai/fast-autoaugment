@@ -200,8 +200,9 @@ def get_magnitude(name, hardness_score, low, high):
     elif name in ["Posterize", "Posterize2", "Solarize"]:
         magnitude = high - magnitude * (high - low)
     elif name in ["Contrast", "Sharpness", "Brightness", "Color"]:
+        assert (low + high)/2 == 1
         low = 0.0
-        high = 0.9
+        high = high - 1
         magnitude = magnitude * (high - low) + low
         magnitude = round(1 + magnitude * random.choice([-1, 1]), 5)
         

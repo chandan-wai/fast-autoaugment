@@ -41,10 +41,7 @@ def setup_hardness():
     hardness_measures = {}
     for measure in measures:
         hardness_measures[measure['name']] = hardness_factory.create(
-                                                    measure['name'], 
-                                                    **(measure['params'] 
-                                                       if measure['params'] 
-                                                       is not None else {}))
+                                                    measure['name'], **({}))
             
     return hardness_measures
 

@@ -3,6 +3,7 @@ from collections import defaultdict
 from PIL import Image
 from theconf import Config as C
 
+
 class CIFAR10_mod(torchvision.datasets.CIFAR10):
     def __init__(self, root, train=True, transform=None, target_transform=None,
                  download=False):

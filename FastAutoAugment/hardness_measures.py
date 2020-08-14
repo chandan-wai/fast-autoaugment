@@ -5,10 +5,6 @@ from torch.nn import CosineSimilarity, CrossEntropyLoss
 from FastAutoAugment.factory import Factory
 
 class AVH:
-    def __init__(self, update_method: str = "no_change", classwise_normalization: bool = False):
-        self.update_method = update_method
-        self.classwise_normalization = classwise_normalization
-        
     def __call__(self, model, embeddings, targets) -> list:
         """Calculate AVH scores per instance in a batch
         :param network: network object of the experiment
@@ -42,10 +38,6 @@ class AVH:
     
     
 class InstanceLoss:
-     def __init__(self, update_method: str = "no_change", classwise_normalization: bool = False):
-        self.update_method = update_method
-        self.classwise_normalization = classwise_normalization
-        
      def __call__(self, predictions, targets) -> list:
         """Calculate loss per instance in a batch
         :param predictions: Predictions (Predicted)
