@@ -212,7 +212,11 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         if multinode:
             train_sampler = torch.utils.data.distributed.DistributedSampler(total_trainset, num_replicas=dist.get_world_size(), rank=dist.get_rank())
             logger.info(f'----- dataset with DistributedSampler  {dist.get_rank()}/{dist.get_world_size()}')
-
+    
+    drop_last = C.get()['drop_last']
+    if C.get()['hardness']['compute']:
+        assert drop_last == False
+        
     trainloader = torch.utils.data.DataLoader(
         total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, 
         num_workers=mp.cpu_count(), pin_memory=True, sampler=train_sampler, drop_last=False)
