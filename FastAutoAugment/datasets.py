@@ -31,8 +31,8 @@ class CIFAR10_mod(torchvision.datasets.CIFAR10):
 
         if self.transform is not None:
             for t in self.transform.transforms:
-                from FastAutoAugment.data import Augmentation
-                if isinstance(t, Augmentation):
+                from FastAutoAugment.data import Augmentation, CutoutDefault
+                if isinstance(t, (Augmentation, CutoutDefault)):
                     img = t(img, hardness_score)
                 else:
                     img = t(img)

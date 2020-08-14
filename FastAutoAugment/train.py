@@ -56,7 +56,7 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
         epsilon = np.finfo(float).eps
         for idx, val in zip(indices, value):
             if isinstance(dataloader.dataset, Subset):
-                dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
             else:
                 dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
 
@@ -163,7 +163,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
 
     max_epoch = C.get()['epoch']
     trainsampler, trainloader, validloader, testloader_ = get_dataloaders(C.get()['dataset'], C.get()['batch'], dataroot, test_ratio, split_idx=cv_fold, multinode=(local_rank >= 0))
-    import ipdb; ipdb.set_trace();
+#     import ipdb; ipdb.set_trace();
     # create a model & an optimizer
     model = get_model(C.get()['model'], num_class(C.get()['dataset']), local_rank=local_rank)
     model_ema = get_model(C.get()['model'], num_class(C.get()['dataset']), local_rank=-1)

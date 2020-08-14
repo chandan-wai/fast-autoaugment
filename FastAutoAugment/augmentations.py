@@ -194,9 +194,10 @@ def get_magnitude(name, hardness_score, low, high):
     min_aug = 1 - hardness_score ** (C.get()['hardness']['f_power'])  
     max_aug = 1 - hardness_score ** (C.get()['hardness']['g_power'])
     magnitude = random.uniform(min_aug, max_aug)
-    if name in ["Rotate", "ShearX", "ShearY", "TranslateX", "TranslateY", "TranslateXAbs", "TranslateYAbs", "Cutout", "CutoutAbs"]:
+    if name in ["Rotate", "ShearX", "ShearY", "TranslateX", "TranslateY", "TranslateXAbs", "TranslateYAbs", "Cutout", "CutoutAbs", "CutoutDefault"]:
         low = 0.0
         magnitude = magnitude * (high - low) + low
+#         print("magnitude", magnitude)
     elif name in ["Posterize", "Posterize2", "Solarize"]:
         magnitude = high - magnitude * (high - low)
     elif name in ["Contrast", "Sharpness", "Brightness", "Color"]:
