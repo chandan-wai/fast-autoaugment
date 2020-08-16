@@ -400,7 +400,7 @@ if __name__ == '__main__':
 
     assert (args.only_eval and args.save) or not args.only_eval, 'checkpoint path not provided in evaluation mode.'
     
-    save_path = C.get().conf['config'].replace('.yaml', '')
+    save_path = os.path.join("/efs-cotton/outputs/fast-autoaugment", C.get().conf['config'].replace('.yaml', ''))
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     save_path = os.path.join(save_path, "test.pth")
