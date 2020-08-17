@@ -67,7 +67,7 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
     indices = indices.cpu().numpy()
     labels = labels.cpu().numpy()
     epsilon = np.finfo(float).eps
-    import ipdb; ipdb.set_trace();
+#     import ipdb; ipdb.set_trace();
     for key, value in hardness_scores.items():
         if C.get()['hardness']['classwise_normalization']:
             classwise_data = find_classwise_data(hardness_scores[key], labels)
