@@ -1,0 +1,30 @@
+{
+    "root": "/home/ubuntu/fast-autoaugment",
+    "program": "FastAutoAugment/train.py",
+    "git": {
+        "remote": "https://github.com/chandan-wai/fast-autoaugment.git",
+        "commit": "9ab88a2ad16deab0c446bcb0fb85f5925d9be45f"
+    },
+    "email": null,
+    "startedAt": "2020-08-17T19:58:08.330992",
+    "host": "ip-192-95-2-14",
+    "username": "ubuntu",
+    "executable": "/home/ubuntu/fast-autoaugment/FA/bin/python",
+    "os": "Linux-5.3.0-1032-aws-x86_64-with-debian-buster-sid",
+    "python": "3.7.7",
+    "gpu": "Tesla M60",
+    "gpu_count": 1,
+    "cpu_count": 16,
+    "cuda": "10.0.130",
+    "args": [
+        "-c",
+        "confs/test.yaml"
+    ],
+    "state": "killed",
+    "jobType": null,
+    "mode": "run",
+    "name": "confs_test",
+    "project": "fast-autoaugment-FastAutoAugment",
+    "heartbeatAt": "2020-08-17T20:14:51.052430",
+    "exitcode": 255
+}

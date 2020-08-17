@@ -19,7 +19,8 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import Subset
 import torch.distributed as dist
 
-import pandas as pd 
+import pandas as pd
+import wandb
 
 from tqdm import tqdm
 from theconf import Config as C, ConfigArgumentParser
@@ -165,7 +166,12 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
     if verbose:
         for key, value in metrics.items():
             writer.add_scalar(key, value, epoch)
-            
+    
+    metrics_dict = metrics.get_dict()
+    for key, value in metrics_dict.items():
+        metrics_dict[desc_default + "/" + key] = metrics_dict.pop(key)
+    
+    wandb.log(metrics_dict, step=epoch)
     if desc_default == "hardness_run":
         return hardness_data
     return metrics
@@ -437,7 +443,11 @@ if __name__ == '__main__':
             logger.info('checkpoint will be saved at %s' % save_path)
         else:
             logger.warning('Provide --save argument to save the checkpoint. Without it, training result will not be saved!')
-
+    
+    run_name = C.get().conf['config'].replace('.yaml', '').replace('/', '_')
+    wandb.init(name=run_name)
+    wandb.config.update(C.get().conf)
+    
     import time
     t = time.time()
     result = train_and_eval(args.tag, args.dataroot, test_ratio=args.cv_ratio, cv_fold=args.cv, save_path=save_path, only_eval=args.only_eval, local_rank=args.local_rank, metric='test', evaluation_interval=args.evaluation_interval)
