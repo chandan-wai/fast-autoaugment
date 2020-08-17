@@ -1,7 +1,8 @@
 model:
   type: wresnet28_10
-dataset: cifar10
-aug: fa_reduced_cifar10
+dataset: reduced_cifar10
+drop_last: False
+aug: autoaug_cifar10
 cutout: 16
 batch: 128
 epoch: 200
@@ -19,15 +20,18 @@ optimizer:
 hardness:
     compute: True
     interval: 1
-    use: True
+    use: False
+    use_in_cutout: False
     aug_measure: AVH
     f_power: 0.77
     g_power: 1.33
-    classwise_normalization: False
+    classwise_normalization: True
     measures:
       - name: AVH
         params:
+            classwise_normalization: False
             update_method: minmax_scaling
       - name: instance_loss
         params:
+            classwise_normalization: False
             update_method: minmax_scaling

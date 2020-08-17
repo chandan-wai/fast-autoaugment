@@ -19,6 +19,8 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import Subset
 import torch.distributed as dist
 
+import pandas as pd 
+
 from tqdm import tqdm
 from theconf import Config as C, ConfigArgumentParser
 
@@ -47,18 +49,43 @@ def setup_hardness():
     return hardness_measures
 
 
+def find_classwise_data(hardness_scores, targets):
+        combined_dict = {'hardness_scores': hardness_scores, 'targets': targets}
+        df = pd.DataFrame(combined_dict)
+        
+        classwise_data = dict()
+        for target, df_target in df.groupby('targets'):
+            min_value = df_target['hardness_scores'].min()
+            max_value = df_target['hardness_scores'].max()
+            epsilon = np.finfo(float).eps
+            classwise_data[target] = {'min':min_value, 'max': max_value}
+            
+        return classwise_data
+    
+
 def update_hardness(indices, hardness_scores, dataloader, labels):
     indices = indices.cpu().numpy()
-    
+    labels = labels.cpu().numpy()
+    epsilon = np.finfo(float).eps
+    import ipdb; ipdb.set_trace();
     for key, value in hardness_scores.items():
-        min_value = min(value)
-        max_value = max(value)
-        epsilon = np.finfo(float).eps
-        for idx, val in zip(indices, value):
-            if isinstance(dataloader.dataset, Subset):
-                dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
-            else:
-                dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+        if C.get()['hardness']['classwise_normalization']:
+            classwise_data = find_classwise_data(hardness_scores[key], labels)
+            for idx, val, label in zip(indices, value, labels):
+                min_value = classwise_data[label]['min']
+                max_value = classwise_data[label]['max']
+                if isinstance(dataloader.dataset, Subset):
+                    dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                else:
+                    dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+        else:
+            min_value = min(value)
+            max_value = max(value)
+            for idx, val in zip(indices, value):
+                if isinstance(dataloader.dataset, Subset):
+                    dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                else:
+                    dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
 
 def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, writer=None, verbose=1, scheduler=None, is_master=True, ema=None, wd=0.0, tqdm_disabled=False):
     if verbose:
