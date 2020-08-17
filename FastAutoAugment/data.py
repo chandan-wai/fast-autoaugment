@@ -271,8 +271,16 @@ class Augmentation(object):
         for _ in range(1):
             policy = random.choice(self.policies)
             for name, pr, level in policy:
+                if C.get().conf['hardness'].get('in_pr', False) == True:
+                    assert hardness_score is not None
+                    max_pr = C.get()['hardness']['max_pr']
+                    frac = 1 - hardness_score ** (C.get()['hardness']['pr_power'])
+                    pr = frac * max_pr
+#                     print("frac", frac, "pr", pr, "hardness", hardness_score)
+                
                 if random.random() > pr:
-                    continue
+                        continue
+                    
                 if C.get()['hardness']['use']:
                     assert hardness_score is not None
                     img = apply_augment(img, name, level, hardness_score)

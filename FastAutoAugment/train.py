@@ -50,17 +50,17 @@ def setup_hardness():
 
 
 def find_classwise_data(hardness_scores, targets):
-        combined_dict = {'hardness_scores': hardness_scores, 'targets': targets}
-        df = pd.DataFrame(combined_dict)
+    combined_dict = {'hardness_scores': hardness_scores, 'targets': targets}
+    df = pd.DataFrame(combined_dict)
         
-        classwise_data = dict()
-        for target, df_target in df.groupby('targets'):
-            min_value = df_target['hardness_scores'].min()
-            max_value = df_target['hardness_scores'].max()
-            epsilon = np.finfo(float).eps
-            classwise_data[target] = {'min':min_value, 'max': max_value}
+    classwise_data = dict()
+    for target, df_target in df.groupby('targets'):
+        min_value = df_target['hardness_scores'].min()
+        max_value = df_target['hardness_scores'].max()
+        epsilon = np.finfo(float).eps
+        classwise_data[target] = {'min':min_value, 'max': max_value}
             
-        return classwise_data
+    return classwise_data
     
 
 def update_hardness(indices, hardness_scores, dataloader, labels):
@@ -87,6 +87,7 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
                 else:
                     dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
 
+                    
 def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, writer=None, verbose=1, scheduler=None, is_master=True, ema=None, wd=0.0, tqdm_disabled=False):
     if verbose:
         loader = tqdm(loader, disable=tqdm_disabled)
