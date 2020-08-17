@@ -190,7 +190,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
         reporter = lambda **kwargs: 0
 
     max_epoch = C.get()['epoch']
-    trainsampler, trainloader, validloader, testloader_ = get_dataloaders(C.get()['dataset'], C.get()['batch'], dataroot, test_ratio, split_idx=cv_fold, multinode=(local_rank >= 0))
+    trainsampler, trainloader, extraloader, validloader, testloader_ = get_dataloaders(C.get()['dataset'], C.get()['batch'], dataroot, test_ratio, split_idx=cv_fold, multinode=(local_rank >= 0))
 #     import ipdb; ipdb.set_trace();
     # create a model & an optimizer
     model = get_model(C.get()['model'], num_class(C.get()['dataset']), local_rank=local_rank)
@@ -327,7 +327,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
             if C.get()['hardness']['compute']:
                 if epoch % C.get()['hardness']['interval'] == 0:
                     with torch.no_grad():
-                        rs['hardness_run'] = run_epoch(model, trainloader, criterion_ce, 
+                        rs['hardness_run'] = run_epoch(model, extraloader, criterion_ce, 
                                                 None, desc_default='hardness_run', epoch=epoch, 
                                                 writer=writers[1], verbose=is_master,  
                                                 tqdm_disabled=tqdm_disabled)

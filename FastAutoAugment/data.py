@@ -115,15 +115,20 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
 
     if dataset == 'cifar10':
         total_trainset = CIFAR10_mod(root=dataroot, train=True, download=True, transform=transform_train)
+        extraset = CIFAR10_mod(root=dataroot, train=True, download=True, transform=transform_test)
         testset = CIFAR10_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'reduced_cifar10':
         total_trainset = CIFAR10_mod(root=dataroot, train=True, download=True, transform=transform_train)
+        extraset = CIFAR10_mod(root=dataroot, train=True, download=True, transform=transform_test)
         sss = StratifiedShuffleSplit(n_splits=1, test_size=46000, random_state=0)   # 4000 trainset
         sss = sss.split(list(range(len(total_trainset))), total_trainset.targets)
         train_idx, valid_idx = next(sss)
         targets = [total_trainset.targets[idx] for idx in train_idx]
         total_trainset = Subset(total_trainset, train_idx)
+        extraset = Subset(extraset, train_idx)
+        assert (extraset.dataset.data == total_trainset.dataset.data).all()
         total_trainset.targets = targets
+        extraset.targets = targets
 
         testset = CIFAR10_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'cifar100':
@@ -220,6 +225,9 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
     trainloader = torch.utils.data.DataLoader(
         total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, 
         num_workers=mp.cpu_count(), pin_memory=True, sampler=train_sampler, drop_last=False)
+    extraloader = torch.utils.data.DataLoader(
+        extraset, batch_size=batch, shuffle=True if train_sampler is None else False, 
+        num_workers=mp.cpu_count(), pin_memory=True, sampler=train_sampler, drop_last=False)
     validloader = torch.utils.data.DataLoader(
         total_trainset, batch_size=batch, shuffle=False, num_workers=mp.cpu_count(), 
         pin_memory=True, sampler=valid_sampler, drop_last=False)
@@ -228,7 +236,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         testset, batch_size=batch, shuffle=False, num_workers=mp.cpu_count(), 
         pin_memory=True, drop_last=False
     )
-    return train_sampler, trainloader, validloader, testloader
+    return train_sampler, trainloader, extraloader, validloader, testloader
 
 
 class CutoutDefault(object):
