@@ -109,3 +109,5 @@ venv.bak/
 *.pth.log
 *.sh
 *test.ipynb
+
+wandb/*
