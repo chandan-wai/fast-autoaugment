@@ -79,7 +79,7 @@ class WideResNet(nn.Module):
         out = F.relu(self.bn1(out))
         # out = F.avg_pool2d(out, 8)
         out = F.adaptive_avg_pool2d(out, (1, 1))
-        out = out.view(out.size(0), -1)
-        out = self.linear(out)
+        embeddings = out.view(out.size(0), -1)
+        out = self.linear(embeddings)
 
-        return out
+        return out, embeddings

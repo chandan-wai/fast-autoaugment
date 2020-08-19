@@ -14,12 +14,14 @@ import torch.distributed as dist
 from torchvision.transforms import transforms
 from sklearn.model_selection import StratifiedShuffleSplit
 from theconf import Config as C
+import multiprocessing as mp
 
 from FastAutoAugment.archive import arsaug_policy, autoaug_policy, autoaug_paper_cifar10, fa_reduced_cifar10, fa_reduced_svhn, fa_resnet50_rimagenet
 from FastAutoAugment.augmentations import *
 from FastAutoAugment.common import get_logger
 from FastAutoAugment.imagenet import ImageNet
 from FastAutoAugment.networks.efficientnet_pytorch.model import EfficientNet
+from FastAutoAugment.datasets import CIFAR10_mod
 
 logger = get_logger('Fast AutoAugment')
 logger.setLevel(logging.INFO)
@@ -112,10 +114,10 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         transform_train.transforms.append(CutoutDefault(C.get()['cutout']))
 
     if dataset == 'cifar10':
-        total_trainset = torchvision.datasets.CIFAR10(root=dataroot, train=True, download=True, transform=transform_train)
-        testset = torchvision.datasets.CIFAR10(root=dataroot, train=False, download=True, transform=transform_test)
+        total_trainset = CIFAR10_mod(root=dataroot, train=True, download=True, transform=transform_train)
+        testset = CIFAR10_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'reduced_cifar10':
-        total_trainset = torchvision.datasets.CIFAR10(root=dataroot, train=True, download=True, transform=transform_train)
+        total_trainset = CIFAR10_mod(root=dataroot, train=True, download=True, transform=transform_train)
         sss = StratifiedShuffleSplit(n_splits=1, test_size=46000, random_state=0)   # 4000 trainset
         sss = sss.split(list(range(len(total_trainset))), total_trainset.targets)
         train_idx, valid_idx = next(sss)
@@ -123,7 +125,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         total_trainset = Subset(total_trainset, train_idx)
         total_trainset.targets = targets
 
-        testset = torchvision.datasets.CIFAR10(root=dataroot, train=False, download=True, transform=transform_test)
+        testset = CIFAR10_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'cifar100':
         total_trainset = torchvision.datasets.CIFAR100(root=dataroot, train=True, download=True, transform=transform_train)
         testset = torchvision.datasets.CIFAR100(root=dataroot, train=False, download=True, transform=transform_test)
@@ -210,17 +212,21 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         if multinode:
             train_sampler = torch.utils.data.distributed.DistributedSampler(total_trainset, num_replicas=dist.get_world_size(), rank=dist.get_rank())
             logger.info(f'----- dataset with DistributedSampler  {dist.get_rank()}/{dist.get_world_size()}')
-
+    
+    drop_last = C.get()['drop_last']
+    if C.get()['hardness']['compute']:
+        assert drop_last == False
+        
     trainloader = torch.utils.data.DataLoader(
-        total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, num_workers=8, pin_memory=True,
-        sampler=train_sampler, drop_last=True)
+        total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, 
+        num_workers=mp.cpu_count(), pin_memory=True, sampler=train_sampler, drop_last=False)
     validloader = torch.utils.data.DataLoader(
-        total_trainset, batch_size=batch, shuffle=False, num_workers=4, pin_memory=True,
-        sampler=valid_sampler, drop_last=False)
+        total_trainset, batch_size=batch, shuffle=False, num_workers=mp.cpu_count(), 
+        pin_memory=True, sampler=valid_sampler, drop_last=False)
 
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch, shuffle=False, num_workers=8, pin_memory=True,
-        drop_last=False
+        testset, batch_size=batch, shuffle=False, num_workers=mp.cpu_count(), 
+        pin_memory=True, drop_last=False
     )
     return train_sampler, trainloader, validloader, testloader
 
@@ -232,16 +238,23 @@ class CutoutDefault(object):
     def __init__(self, length):
         self.length = length
 
-    def __call__(self, img):
+    def __call__(self, img, hardness_score=None):
         h, w = img.size(1), img.size(2)
         mask = np.ones((h, w), np.float32)
         y = np.random.randint(h)
         x = np.random.randint(w)
-
-        y1 = np.clip(y - self.length // 2, 0, h)
-        y2 = np.clip(y + self.length // 2, 0, h)
-        x1 = np.clip(x - self.length // 2, 0, w)
-        x2 = np.clip(x + self.length // 2, 0, w)
+        
+        length = self.length
+#         import ipdb; ipdb.set_trace();
+        if C.get()['hardness']['use'] and C.get()['hardness']['use_in_cutout']:
+            assert hardness_score is not None
+            length = get_magnitude("CutoutDefault", hardness_score, 0, self.length)
+            length = int(length)
+#         print(hardness_score, length)
+        y1 = np.clip(y - length // 2, 0, h)
+        y2 = np.clip(y + length // 2, 0, h)
+        x1 = np.clip(x - length // 2, 0, w)
+        x2 = np.clip(x + length // 2, 0, w)
 
         mask[y1: y2, x1: x2] = 0.
         mask = torch.from_numpy(mask)
@@ -254,13 +267,25 @@ class Augmentation(object):
     def __init__(self, policies):
         self.policies = policies
 
-    def __call__(self, img):
+    def __call__(self, img, hardness_score=None):
         for _ in range(1):
             policy = random.choice(self.policies)
             for name, pr, level in policy:
+                if C.get().conf['hardness'].get('in_pr', False) == True:
+                    assert hardness_score is not None
+                    max_pr = C.get()['hardness']['max_pr']
+                    frac = 1 - hardness_score ** (C.get()['hardness']['pr_power'])
+                    pr = frac * max_pr
+#                     print("frac", frac, "pr", pr, "hardness", hardness_score)
+                
                 if random.random() > pr:
-                    continue
-                img = apply_augment(img, name, level)
+                        continue
+                    
+                if C.get()['hardness']['use']:
+                    assert hardness_score is not None
+                    img = apply_augment(img, name, level, hardness_score)
+                else:
+                    img = apply_augment(img, name, level)
         return img
 
 

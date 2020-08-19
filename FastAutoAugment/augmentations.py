@@ -6,6 +6,7 @@ import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
 import numpy as np
 import torch
 from torchvision.transforms.transforms import Compose
+from theconf import Config as C
 
 random_mirror = True
 
@@ -189,8 +190,30 @@ def get_augment(name):
     return augment_dict[name]
 
 
-def apply_augment(img, name, level):
+def get_magnitude(name, hardness_score, low, high):
+    min_aug = 1 - hardness_score ** (C.get()['hardness']['f_power'])  
+    max_aug = 1 - hardness_score ** (C.get()['hardness']['g_power'])
+    magnitude = random.uniform(min_aug, max_aug)
+    if name in ["Rotate", "ShearX", "ShearY", "TranslateX", "TranslateY", "TranslateXAbs", "TranslateYAbs", "Cutout", "CutoutAbs", "CutoutDefault"]:
+        low = 0.0
+        magnitude = magnitude * (high - low) + low
+#         print("magnitude", magnitude)
+    elif name in ["Posterize", "Posterize2", "Solarize"]:
+        magnitude = high - magnitude * (high - low)
+    elif name in ["Contrast", "Sharpness", "Brightness", "Color"]:
+        assert (low + high)/2 == 1
+        low = 0.0
+        high = high - 1
+        magnitude = magnitude * (high - low) + low
+        magnitude = round(1 + magnitude * random.choice([-1, 1]), 5)
+        
+    return magnitude
+
+def apply_augment(img, name, level, hardness_score=None):
     augment_fn, low, high = get_augment(name)
+    if hardness_score is not None:
+        magnitude = get_magnitude(name, hardness_score, low, high)
+        return augment_fn(img.copy(), magnitude)
     return augment_fn(img.copy(), level * (high - low) + low)
 
 
