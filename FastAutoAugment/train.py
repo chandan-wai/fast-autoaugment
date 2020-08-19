@@ -380,10 +380,15 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                                 tqdm_disabled=tqdm_disabled, extraloader=extraloader, 
                                 hardness_measures=hardness_measures)
 #         import ipdb; ipdb.set_trace();
+        log_path = save_path.replace('/test.pth', '')        
+        log_path = os.path.join(log_path, "logs")
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+        log_path = os.path.join(log_path, "hardness_data_epoch_{}.pt".format(epoch))
+        logger.info('saving hardness data')
+        torch.save(epoch_data, log_path)
         model.eval()
                     
-        hardness_data["epoch_{}".format(epoch)] = epoch_data
-        
         if math.isnan(rs['train']['loss']):
             raise Exception('train loss is NaN.')
 
@@ -443,14 +448,6 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                         'model': model.state_dict(),
                         'ema': ema.state_dict() if ema is not None else None,
                     }, save_path)
-            
-            log_path = save_path.replace('/test.pth', '')        
-            log_path = os.path.join(log_path, "logs")
-            if not os.path.exists(log_path):
-                os.makedirs(log_path)
-            log_path = os.path.join(log_path, "hardness_data.pt")
-            logger.info('saving hardness data')
-            torch.save(hardness_data, log_path)
 
     del model
 
