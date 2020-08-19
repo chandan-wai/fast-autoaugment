@@ -380,7 +380,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                                 scheduler=scheduler, ema=ema, wd=C.get()['optimizer']['decay'], 
                                 tqdm_disabled=tqdm_disabled, extraloader=extraloader, 
                                 hardness_measures=hardness_measures)
-        import ipdb; ipdb.set_trace();
+#         import ipdb; ipdb.set_trace();
         model.eval()
                     
         hardness_data["epoch_{}".format(epoch)] = epoch_data
