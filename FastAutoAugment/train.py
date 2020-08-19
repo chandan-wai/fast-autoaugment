@@ -196,8 +196,7 @@ def run_epoch(model, dataloader, loss_fn, optimizer, desc_default='', epoch=0, w
                     epoch_data["batch_{}_indices".format(steps)] = index
                     if prev_mode:
                         model.train()
-        if steps == 2:
-            break
+        
         del preds, loss, top1, top5, data, label, index
 
     if tqdm_disabled and verbose:
