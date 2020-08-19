@@ -87,21 +87,25 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
                     dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
                 else:
                     dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    
+    if isinstance(dataloader.dataset, Subset):
+        return dataloader.dataset.dataset.hardness_scores
+    else:
+        return dataloader.dataset.hardness_scores
 
                     
-def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, writer=None, verbose=1, scheduler=None, is_master=True, ema=None, wd=0.0, tqdm_disabled=False):
+def run_epoch(model, dataloader, loss_fn, optimizer, desc_default='', epoch=0, writer=None, verbose=1, scheduler=None, is_master=True, ema=None, wd=0.0, tqdm_disabled=False, extraloader=None, hardness_measures=None):
     if verbose:
-        loader = tqdm(loader, disable=tqdm_disabled)
+        loader = tqdm(dataloader, disable=tqdm_disabled)
         loader.set_description('[%s %04d/%04d]' % (desc_default, epoch, C.get()['epoch']))
 
     params_without_bn = [params for name, params in model.named_parameters() if not ('_bn' in name or '.bn' in name)]
-
+    epoch_data = dict()
     loss_ema = None
     metrics = Accumulator()
     cnt = 0
     total_steps = len(loader)
     steps = 0
-    hardness_data = defaultdict(list)
     for data, label, index in loader:
         steps += 1
         data, label = data.cuda(), label.cuda()
@@ -147,11 +151,52 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
 
         if scheduler is not None:
             scheduler.step(epoch - 1 + float(steps) / total_steps)
+            
+        if C.get().conf.get('hardness') is not None and desc_default == 'train':
+            if C.get()['hardness']['compute']:
+                if epoch % C.get()['hardness']['interval'] == 0:
+                    assert extraloader is not None
+                    assert hardness_measures is not None
+                    hardness_data = defaultdict(list)
+                    prev_mode = model.training
+                    model.eval()
+                    with torch.no_grad():
+                        if verbose:
+                            extraloader = tqdm(extraloader, disable=tqdm_disabled)
+                            extraloader.set_description('[%s %04d/%04d]' % ("hardness_run", epoch, C.get()['epoch']))
+                            
+                        for i, (data_, label_, index_) in enumerate(extraloader):
+                            data_, label_ = data_.cuda(), label_.cuda()
+                            preds_, embeddings_ = model(data_)
+                            loss_ = loss_fn(preds_, label_)
+                            
+                            hardness_data['preds'].append(preds_)
+                            hardness_data['embeddings'].append(embeddings_)
+                            hardness_data['labels'].append(label_)
+                            hardness_data['indices'].append(index_)
         
-        hardness_data['preds'].append(preds)
-        hardness_data['embeddings'].append(embeddings)
-        hardness_data['labels'].append(label)
-        hardness_data['indices'].append(index)
+                            
+                    hardness_scores = dict()
+                    for key in list(hardness_measures.keys()):
+                        if key == "AVH":
+                            hardness_scores[key] = hardness_measures[key](
+                                                        model=model, 
+                                                        embeddings=torch.cat(hardness_data['embeddings']), 
+                                                        targets=torch.cat(hardness_data['labels']))
+                        elif key == "instance_loss":
+                            hardness_scores[key] = hardness_measures[key](
+                                                        predictions=torch.cat(hardness_data['preds']), 
+                                                        targets=torch.cat(hardness_data['labels']))
+                        hardness_scores[key] = np.array([score.item() for score in hardness_scores[key]])
+                    
+#                     import ipdb; ipdb.set_trace();
+                    hardness_scores = update_hardness(torch.cat(hardness_data['indices']), 
+                                    hardness_scores, dataloader, torch.cat(hardness_data['labels']))
+                    epoch_data["batch_{}".format(steps)] = hardness_scores
+                    epoch_data["batch_{}_indices".format(steps)] = index
+                    if prev_mode:
+                        model.train()
+        
         del preds, loss, top1, top5, data, label, index
 
     if tqdm_disabled and verbose:
@@ -172,9 +217,10 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
         metrics_dict[desc_default + "/" + key] = metrics_dict.pop(key)
     
     wandb.log(metrics_dict, step=epoch)
-    if desc_default == "hardness_run":
-        return hardness_data
-    return metrics
+    if desc_default == 'train':
+        return metrics, epoch_data
+    else:
+        return metrics
 
 
 def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metric='last', save_path=None, only_eval=False, local_rank=-1, evaluation_interval=5):
@@ -319,6 +365,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
             if C.get()['hardness']['compute']:
                 hardness_measures = setup_hardness()
     # train loop
+    hardness_data = dict()
     best_top1 = 0
     for epoch in range(epoch_start, max_epoch + 1):
         if local_rank >= 0:
@@ -326,34 +373,17 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
 
         model.train()
         rs = dict()
-        rs['train'] = run_epoch(model, trainloader, criterion, optimizer, desc_default='train', epoch=epoch, writer=writers[0], verbose=(is_master and local_rank <= 0), scheduler=scheduler, ema=ema, wd=C.get()['optimizer']['decay'], tqdm_disabled=tqdm_disabled)
+        rs['train'], epoch_data = run_epoch(model, trainloader, criterion, optimizer, 
+                                desc_default='train', epoch=epoch, writer=writers[0], 
+                                verbose=(is_master and local_rank <= 0), 
+                                scheduler=scheduler, ema=ema, wd=C.get()['optimizer']['decay'], 
+                                tqdm_disabled=tqdm_disabled, extraloader=extraloader, 
+                                hardness_measures=hardness_measures)
+        import ipdb; ipdb.set_trace();
         model.eval()
+                    
+        hardness_data["epoch_{}".format(epoch)] = epoch_data
         
-        if C.get().conf.get('hardness') is not None:
-            if C.get()['hardness']['compute']:
-                if epoch % C.get()['hardness']['interval'] == 0:
-                    with torch.no_grad():
-                        rs['hardness_run'] = run_epoch(model, extraloader, criterion_ce, 
-                                                None, desc_default='hardness_run', epoch=epoch, 
-                                                writer=writers[1], verbose=is_master,  
-                                                tqdm_disabled=tqdm_disabled)
-                    
-                    hardness_scores = dict()
-                    for key in list(hardness_measures.keys()):
-                        if key == "AVH":
-                            hardness_scores[key] = hardness_measures[key](
-                                                        model=model, 
-                                                        embeddings=torch.cat(rs['hardness_run']['embeddings']), 
-                                                        targets=torch.cat(rs['hardness_run']['labels']))
-                        elif key == "instance_loss":
-                            hardness_scores[key] = hardness_measures[key](
-                                                        predictions=torch.cat(rs['hardness_run']['preds']), 
-                                                        targets=torch.cat(rs['hardness_run']['labels']))
-                        hardness_scores[key] = np.array([score.item() for score in hardness_scores[key]])
-                    
-                    update_hardness(torch.cat(rs['hardness_run']['indices']), 
-                                    hardness_scores, trainloader, torch.cat(rs['hardness_run']['labels']))
-                    
         if math.isnan(rs['train']['loss']):
             raise Exception('train loss is NaN.')
 
@@ -413,6 +443,13 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                         'model': model.state_dict(),
                         'ema': ema.state_dict() if ema is not None else None,
                     }, save_path)
+                    
+            log_path = os.path.join(save_path, "logs")
+            if not os.path.exists(log_path):
+                os.makedirs(log_path)
+            log_path = os.path.join(log_path, "hardness_data.pt")
+            logger.info('saving hardness data')
+            torch.save(hardness_data, log_path)
 
     del model
 
