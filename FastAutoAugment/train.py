@@ -196,7 +196,8 @@ def run_epoch(model, dataloader, loss_fn, optimizer, desc_default='', epoch=0, w
                     epoch_data["batch_{}_indices".format(steps)] = index
                     if prev_mode:
                         model.train()
-        
+        if steps == 2:
+            break
         del preds, loss, top1, top5, data, label, index
 
     if tqdm_disabled and verbose:
@@ -443,8 +444,9 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                         'model': model.state_dict(),
                         'ema': ema.state_dict() if ema is not None else None,
                     }, save_path)
-                    
-            log_path = os.path.join(save_path, "logs")
+            
+            log_path = save_path.replace('/test.pth', '')        
+            log_path = os.path.join(log_path, "logs")
             if not os.path.exists(log_path):
                 os.makedirs(log_path)
             log_path = os.path.join(log_path, "hardness_data.pt")
