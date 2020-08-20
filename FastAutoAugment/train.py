@@ -197,7 +197,7 @@ def run_epoch(model, dataloader, loss_fn, optimizer, desc_default='', epoch=0, w
                     
                     hardness_scores_ids = update_hardness(torch.cat(hardness_data['indices']), 
                                     hardness_scores, dataloader, torch.cat(hardness_data['labels']))
-                    import ipdb; ipdb.set_trace();
+#                     import ipdb; ipdb.set_trace();
                     epoch_data["batch_{}".format(steps)] = copy.deepcopy(hardness_scores_ids)
                     epoch_data["batch_{}_indices".format(steps)] = index
                     if prev_mode:
