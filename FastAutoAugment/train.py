@@ -78,16 +78,20 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
                 max_value = classwise_data[label]['max']
                 if isinstance(dataloader.dataset, Subset):
                     dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.dataset.hardness_scores['absolute' + key].update({idx:val})
                 else:
                     dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.hardness_scores['absolute' + key].update({idx:val})
         else:
             min_value = min(value)
             max_value = max(value)
             for idx, val in zip(indices, value):
                 if isinstance(dataloader.dataset, Subset):
                     dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.dataset.hardness_scores['absolute' + key].update({idx:val})
                 else:
                     dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.hardness_scores['absolute' + key].update({idx:val})
                     
     if isinstance(dataloader.dataset, Subset):
         return dataloader.dataset.dataset.hardness_scores
@@ -193,7 +197,7 @@ def run_epoch(model, dataloader, loss_fn, optimizer, desc_default='', epoch=0, w
                     
                     hardness_scores_ids = update_hardness(torch.cat(hardness_data['indices']), 
                                     hardness_scores, dataloader, torch.cat(hardness_data['labels']))
-#                     import ipdb; ipdb.set_trace();
+                    import ipdb; ipdb.set_trace();
                     epoch_data["batch_{}".format(steps)] = copy.deepcopy(hardness_scores_ids)
                     epoch_data["batch_{}_indices".format(steps)] = index
                     if prev_mode:
