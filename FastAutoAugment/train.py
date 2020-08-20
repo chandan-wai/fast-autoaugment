@@ -8,6 +8,7 @@ import json
 import logging
 import math
 import os
+import copy
 import numpy as np
 from collections import OrderedDict
 from collections import defaultdict
@@ -189,13 +190,17 @@ def run_epoch(model, dataloader, loss_fn, optimizer, desc_default='', epoch=0, w
                                                         targets=torch.cat(hardness_data['labels']))
                         hardness_scores[key] = np.array([score.item() for score in hardness_scores[key]])
                     
-#                     import ipdb; ipdb.set_trace();
-                    hardness_scores = update_hardness(torch.cat(hardness_data['indices']), 
+                    
+                    hardness_scores_ids = update_hardness(torch.cat(hardness_data['indices']), 
                                     hardness_scores, dataloader, torch.cat(hardness_data['labels']))
-                    epoch_data["batch_{}".format(steps)] = hardness_scores
+#                     import ipdb; ipdb.set_trace();
+                    epoch_data["batch_{}".format(steps)] = copy.deepcopy(hardness_scores_ids)
                     epoch_data["batch_{}_indices".format(steps)] = index
                     if prev_mode:
                         model.train()
+                    
+#                     if steps==3:
+#                         break
         
         del preds, loss, top1, top5, data, label, index
 
@@ -261,7 +266,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
             nesterov=C.get()['optimizer'].get('nesterov', True)
         )
     elif C.get()['optimizer']['type'] == 'rmsprop':
-        optimizer = RMSpropTF(
+        optimizer =  RMSpropTF(
             model.parameters(),
             lr=C.get()['lr'],
             weight_decay=0.0,
