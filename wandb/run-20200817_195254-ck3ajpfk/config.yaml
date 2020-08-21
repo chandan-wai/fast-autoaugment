@@ -1,0 +1,136 @@
+wandb_version: 1
+
+_git:
+  desc: null
+  value:
+    branch: fork2
+    commit:
+      comment: 'added some configs
+
+        '
+      hash: 9ab88a2ad16deab0c446bcb0fb85f5925d9be45f
+    remote: https://github.com/chandan-wai/fast-autoaugment.git
+    status:
+      diff:
+      - path: .gitignore
+        type: M
+      - path: FastAutoAugment/train.py
+        type: M
+      - path: requirements.txt
+        type: M
+      untracked:
+      - confs/hardnessaware/class_norm/wresnet28x10_cifar-AA-rerun3.yaml
+      - confs/hardnessaware/class_norm/wresnet28x10_cifar-AA-rerun4.yaml
+      - confs/hardnessaware/class_norm/wresnet28x10_cifar-AA-rerun5.yaml
+      - confs/hardnessaware/intervals/wresnet28x10_rcifar-AA-10-rerun3.yaml
+      - confs/hardnessaware/intervals/wresnet28x10_rcifar-AA-10-rerun4.yaml
+      - confs/hardnessaware/intervals/wresnet28x10_rcifar-AA-10-rerun5.yaml
+      - confs/hardnessaware/wresnet28x10_rcifar-AA-cutout-rerun3.yaml
+      - confs/hardnessaware/wresnet28x10_rcifar-AA-cutout-rerun4.yaml
+      - confs/hardnessaware/wresnet28x10_rcifar-AA-cutout-rerun5.yaml
+      - confs/hardnessaware/wresnet28x10_rcifar-AA-rerun3.yaml
+      - confs/hardnessaware/wresnet28x10_rcifar-AA-rerun4.yaml
+      - confs/hardnessaware/wresnet28x10_rcifar-AA-rerun5.yaml
+_timestamp:
+  desc: null
+  value: 2020/08/17 19:52:53
+_version:
+  desc: null
+  value: 1
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.9.4
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.7.7
+aug:
+  desc: null
+  value: autoaug_cifar10
+batch:
+  desc: null
+  value: 128
+config:
+  desc: null
+  value: confs/test.yaml
+cutout:
+  desc: null
+  value: 16
+cv:
+  desc: null
+  value: 0
+dataroot:
+  desc: null
+  value: data
+dataset:
+  desc: null
+  value: reduced_cifar10
+drop_last:
+  desc: null
+  value: false
+epoch:
+  desc: null
+  value: 200
+evaluation:
+  desc: null
+  value:
+    interval: 5
+hardness:
+  desc: null
+  value:
+    aug_measure: AVH
+    classwise_normalization: false
+    compute: true
+    f_power: 0.77
+    g_power: 1.33
+    in_pr: true
+    interval: 1
+    max_pr: 0.5
+    measures:
+    - name: AVH
+      params:
+        classwise_normalization: false
+        update_method: minmax_scaling
+    - name: instance_loss
+      params:
+        classwise_normalization: false
+        update_method: minmax_scaling
+    pr_power: 1.33
+    use: false
+    use_in_cutout: false
+local:
+  desc: null
+  value:
+    rank: -1
+lr:
+  desc: null
+  value: 0.1
+lr_schedule:
+  desc: null
+  value:
+    type: cosine
+    warmup:
+      epoch: 5
+      multiplier: 1
+model:
+  desc: null
+  value:
+    type: wresnet28_10
+only:
+  desc: null
+  value:
+    eval: false
+optimizer:
+  desc: null
+  value:
+    decay: 0.0005
+    ema: 0
+    nesterov: true
+    type: sgd
+save:
+  desc: null
+  value: test.pth
+tag:
+  desc: null
+  value: ''

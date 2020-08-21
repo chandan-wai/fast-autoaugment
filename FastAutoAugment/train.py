@@ -19,7 +19,8 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import Subset
 import torch.distributed as dist
 
-import pandas as pd 
+import pandas as pd
+import wandb
 
 from tqdm import tqdm
 from theconf import Config as C, ConfigArgumentParser
@@ -165,7 +166,12 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
     if verbose:
         for key, value in metrics.items():
             writer.add_scalar(key, value, epoch)
-            
+    
+    metrics_dict = metrics.get_dict()
+    for key, value in metrics_dict.items():
+        metrics_dict[desc_default + "/" + key] = metrics_dict.pop(key)
+    
+    wandb.log(metrics_dict, step=epoch)
     if desc_default == "hardness_run":
         return hardness_data
     return metrics
@@ -190,7 +196,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
         reporter = lambda **kwargs: 0
 
     max_epoch = C.get()['epoch']
-    trainsampler, trainloader, validloader, testloader_ = get_dataloaders(C.get()['dataset'], C.get()['batch'], dataroot, test_ratio, split_idx=cv_fold, multinode=(local_rank >= 0))
+    trainsampler, trainloader, extraloader, validloader, testloader_ = get_dataloaders(C.get()['dataset'], C.get()['batch'], dataroot, test_ratio, split_idx=cv_fold, multinode=(local_rank >= 0))
 #     import ipdb; ipdb.set_trace();
     # create a model & an optimizer
     model = get_model(C.get()['model'], num_class(C.get()['dataset']), local_rank=local_rank)
@@ -327,7 +333,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
             if C.get()['hardness']['compute']:
                 if epoch % C.get()['hardness']['interval'] == 0:
                     with torch.no_grad():
-                        rs['hardness_run'] = run_epoch(model, trainloader, criterion_ce, 
+                        rs['hardness_run'] = run_epoch(model, extraloader, criterion_ce, 
                                                 None, desc_default='hardness_run', epoch=epoch, 
                                                 writer=writers[1], verbose=is_master,  
                                                 tqdm_disabled=tqdm_disabled)
@@ -437,7 +443,11 @@ if __name__ == '__main__':
             logger.info('checkpoint will be saved at %s' % save_path)
         else:
             logger.warning('Provide --save argument to save the checkpoint. Without it, training result will not be saved!')
-
+    
+    run_name = C.get().conf['config'].replace('.yaml', '').replace('/', '_')
+    wandb.init(name=run_name)
+    wandb.config.update(C.get().conf)
+    
     import time
     t = time.time()
     result = train_and_eval(args.tag, args.dataroot, test_ratio=args.cv_ratio, cv_fold=args.cv, save_path=save_path, only_eval=args.only_eval, local_rank=args.local_rank, metric='test', evaluation_interval=args.evaluation_interval)

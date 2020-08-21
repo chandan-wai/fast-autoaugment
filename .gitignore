@@ -107,5 +107,7 @@ venv.bak/
 # checkpoints and logs
 *.pth 
 *.pth.log
-
+*.sh
 *test.ipynb
+
+wandb/*
