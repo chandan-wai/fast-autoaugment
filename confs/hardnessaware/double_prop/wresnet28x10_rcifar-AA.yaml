@@ -2,8 +2,8 @@ model:
   type: wresnet28_10
 dataset: reduced_cifar10
 drop_last: False
-aug: default
-cutout: 0
+aug: autoaug_cifar10
+cutout: 16
 batch: 128
 epoch: 200
 lr: 0.1
@@ -20,9 +20,9 @@ optimizer:
 hardness:
     compute: True
     interval: 1
-    use: False
+    use: True
     use_in_cutout: False
-    in_pr: True
+    in_pr: False
     max_pr: 0.5
     aug_measure: AVH
     f_power: 0.77

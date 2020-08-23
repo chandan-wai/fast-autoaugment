@@ -22,7 +22,7 @@ hardness:
     interval: 1
     use: False
     use_in_cutout: False
-    in_pr: True
+    in_pr: False
     max_pr: 0.5
     aug_measure: AVH
     f_power: 0.77

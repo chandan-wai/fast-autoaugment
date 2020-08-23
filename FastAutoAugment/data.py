@@ -107,6 +107,9 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
             transform_train.transforms.insert(0, Augmentation(autoaug_policy()))
         elif C.get()['aug'] in ['default']:
             pass
+        elif C.get()['aug'] == 'no_aug':
+            print('using no augmentation at all')
+            transform_train = transform_test
         else:
             raise ValueError('not found augmentations. %s' % C.get()['aug'])
 
