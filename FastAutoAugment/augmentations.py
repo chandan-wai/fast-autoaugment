@@ -56,9 +56,9 @@ def TranslateYAbs(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
 
 
 def Rotate(img, v):  # [-30, 30]
-    assert -30 <= v <= 30
-    if random_mirror and random.random() > 0.5:
-        v = -v
+#     assert -30 <= v <= 30
+#     if random_mirror and random.random() > 0.5:
+#         v = -v
     return img.rotate(v)
 
 
@@ -96,7 +96,7 @@ def Posterize2(img, v):  # [0, 4]
 
 
 def Contrast(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
+#     assert 0.1 <= v <= 1.9
     return PIL.ImageEnhance.Contrast(img).enhance(v)
 
 
@@ -215,6 +215,14 @@ def apply_augment(img, name, level, hardness_score=None):
         magnitude = get_magnitude(name, hardness_score, low, high)
         return augment_fn(img.copy(), magnitude)
     return augment_fn(img.copy(), level * (high - low) + low)
+
+
+def apply_augment_direct(img, name, level, hardness_score=None):
+    augment_fn, low, high = get_augment(name)
+#     if hardness_score is not None:
+#         magnitude = get_magnitude(name, hardness_score, low, high)
+#         return augment_fn(img.copy(), magnitude)
+    return augment_fn(img.copy(), level)
 
 
 class Lighting(object):
