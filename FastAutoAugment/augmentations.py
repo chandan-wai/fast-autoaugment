@@ -12,21 +12,21 @@ random_mirror = True
 
 
 def ShearX(img, v):  # [-0.3, 0.3]
-    assert -0.3 <= v <= 0.3
+#     assert -0.3 <= v <= 0.3
     if random_mirror and random.random() > 0.5:
         v = -v
     return img.transform(img.size, PIL.Image.AFFINE, (1, v, 0, 0, 1, 0))
 
 
 def ShearY(img, v):  # [-0.3, 0.3]
-    assert -0.3 <= v <= 0.3
+#     assert -0.3 <= v <= 0.3
     if random_mirror and random.random() > 0.5:
         v = -v
     return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, v, 1, 0))
 
 
 def TranslateX(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert -0.45 <= v <= 0.45
+#     assert -0.45 <= v <= 0.45
     if random_mirror and random.random() > 0.5:
         v = -v
     v = v * img.size[0]
@@ -34,7 +34,7 @@ def TranslateX(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
 
 
 def TranslateY(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert -0.45 <= v <= 0.45
+#     assert -0.45 <= v <= 0.45
     if random_mirror and random.random() > 0.5:
         v = -v
     v = v * img.size[1]
@@ -42,14 +42,14 @@ def TranslateY(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
 
 
 def TranslateXAbs(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert 0 <= v <= 10
+#     assert 0 <= v <= 10
     if random.random() > 0.5:
         v = -v
     return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0))
 
 
 def TranslateYAbs(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert 0 <= v <= 10
+#     assert 0 <= v <= 10
     if random.random() > 0.5:
         v = -v
     return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v))
@@ -84,13 +84,13 @@ def Solarize(img, v):  # [0, 256]
 
 
 def Posterize(img, v):  # [4, 8]
-    assert 4 <= v <= 8
+#     assert 4 <= v <= 8
     v = int(v)
     return PIL.ImageOps.posterize(img, v)
 
 
 def Posterize2(img, v):  # [0, 4]
-    assert 0 <= v <= 4
+#     assert 0 <= v <= 4
     v = int(v)
     return PIL.ImageOps.posterize(img, v)
 
@@ -101,17 +101,17 @@ def Contrast(img, v):  # [0.1,1.9]
 
 
 def Color(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
+#     assert 0.1 <= v <= 1.9
     return PIL.ImageEnhance.Color(img).enhance(v)
 
 
 def Brightness(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
+#     assert 0.1 <= v <= 1.9
     return PIL.ImageEnhance.Brightness(img).enhance(v)
 
 
 def Sharpness(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
+#     assert 0.1 <= v <= 1.9
     return PIL.ImageEnhance.Sharpness(img).enhance(v)
 
 
