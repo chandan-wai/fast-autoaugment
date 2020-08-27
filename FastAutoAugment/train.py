@@ -65,41 +65,39 @@ def find_classwise_data(hardness_scores, targets):
     return classwise_data
     
 
-def update_hardness(indices, hardness_scores, dataloader, labels):
+def update_hardness(hardness_scores_ids, dataloader):          
+    if isinstance(dataloader.dataset, Subset):
+        dataloader.dataset.dataset.hardness_scores = hardness_scores_ids
+    else:
+        dataloader.dataset.hardness_scores = hardness_scores_ids
+    
+    
+def normalize_hardness(indices, hardness_scores, dataloader, labels):
     indices = indices.cpu().numpy()
     labels = labels.cpu().numpy()
     epsilon = np.finfo(float).eps
 #     import ipdb; ipdb.set_trace();
+    hardness_scores_ids = defaultdict(defaultdict)
     for key, value in hardness_scores.items():
         if C.get()['hardness']['classwise_normalization']:
             classwise_data = find_classwise_data(hardness_scores[key], labels)
             for idx, val, label in zip(indices, value, labels):
                 min_value = classwise_data[label]['min']
                 max_value = classwise_data[label]['max']
-                if isinstance(dataloader.dataset, Subset):
-                    dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
-                    dataloader.dataset.dataset.hardness_scores['absolute' + key].update({idx:val})
-                else:
-                    dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
-                    dataloader.dataset.hardness_scores['absolute' + key].update({idx:val})
+                hardness_scores_ids[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                hardness_scores_ids['absolute' + key].update({idx:val})
         else:
             min_value = min(value)
             max_value = max(value)
             for idx, val in zip(indices, value):
-                if isinstance(dataloader.dataset, Subset):
-                    dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
-                    dataloader.dataset.dataset.hardness_scores['absolute' + key].update({idx:val})
-                else:
-                    dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
-                    dataloader.dataset.hardness_scores['absolute' + key].update({idx:val})
+                hardness_scores_ids[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                hardness_scores_ids['absolute' + key].update({idx:val})
                     
-    if isinstance(dataloader.dataset, Subset):
-        return dataloader.dataset.dataset.hardness_scores
-    else:
-        return dataloader.dataset.hardness_scores
+    return hardness_scores_ids
 
                     
 def run_epoch(model, dataloader, loss_fn, optimizer, desc_default='', epoch=0, writer=None, verbose=1, scheduler=None, is_master=True, ema=None, wd=0.0, tqdm_disabled=False, extraloader=None, hardness_measures=None):
+#     import ipdb; ipdb.set_trace();
     if verbose:
         loader = tqdm(dataloader, disable=tqdm_disabled)
         loader.set_description('[%s %04d/%04d]' % (desc_default, epoch, C.get()['epoch']))
@@ -159,49 +157,50 @@ def run_epoch(model, dataloader, loss_fn, optimizer, desc_default='', epoch=0, w
             
         if C.get().conf.get('hardness') is not None and desc_default == 'train':
             if C.get()['hardness']['compute']:
-                if epoch % C.get()['hardness']['interval'] == 0:
-                    assert extraloader is not None
-                    assert hardness_measures is not None
-                    hardness_data = defaultdict(list)
-                    prev_mode = model.training
-                    model.eval()
-                    with torch.no_grad():
-                        if verbose:
-                            extraloader = tqdm(extraloader, disable=tqdm_disabled)
-                            extraloader.set_description('[%s %04d/%04d]' % ("hardness_run", epoch, C.get()['epoch']))
+                assert extraloader is not None
+                assert hardness_measures is not None
+                hardness_data = defaultdict(list)
+                prev_mode = model.training
+                model.eval()
+                with torch.no_grad():
+                    if verbose:
+                        extraloader = tqdm(extraloader, disable=tqdm_disabled)
+                        extraloader.set_description('[%s %04d/%04d]' % ("hardness_run", epoch, C.get()['epoch']))
                             
-                        for i, (data_, label_, index_) in enumerate(extraloader):
-                            data_, label_ = data_.cuda(), label_.cuda()
-                            preds_, embeddings_ = model(data_)
-                            loss_ = loss_fn(preds_, label_)
+                    for i, (data_, label_, index_) in enumerate(extraloader):
+                        data_, label_ = data_.cuda(), label_.cuda()
+                        preds_, embeddings_ = model(data_)
+                        loss_ = loss_fn(preds_, label_)
                             
-                            hardness_data['preds'].append(preds_)
-                            hardness_data['embeddings'].append(embeddings_)
-                            hardness_data['labels'].append(label_)
-                            hardness_data['indices'].append(index_)
+                        hardness_data['preds'].append(preds_)
+                        hardness_data['embeddings'].append(embeddings_)
+                        hardness_data['labels'].append(label_)
+                        hardness_data['indices'].append(index_)
         
                             
-                    hardness_scores = dict()
-                    for key in list(hardness_measures.keys()):
-                        if key == "AVH":
-                            hardness_scores[key] = hardness_measures[key](
-                                                        model=model, 
-                                                        embeddings=torch.cat(hardness_data['embeddings']), 
-                                                        targets=torch.cat(hardness_data['labels']))
-                        elif key == "instance_loss":
-                            hardness_scores[key] = hardness_measures[key](
-                                                        predictions=torch.cat(hardness_data['preds']), 
-                                                        targets=torch.cat(hardness_data['labels']))
-                        hardness_scores[key] = np.array([score.item() for score in hardness_scores[key]])
+                hardness_scores = dict()
+                for key in list(hardness_measures.keys()):
+                    if key == "AVH":
+                        hardness_scores[key] = hardness_measures[key](
+                                                    model=model, 
+                                                    embeddings=torch.cat(hardness_data['embeddings']), 
+                                                    targets=torch.cat(hardness_data['labels']))
+                    elif key == "instance_loss":
+                        hardness_scores[key] = hardness_measures[key](
+                                                    predictions=torch.cat(hardness_data['preds']), 
+                                                    targets=torch.cat(hardness_data['labels']))
+                    hardness_scores[key] = np.array([score.item() for score in hardness_scores[key]])
                     
-                    
-                    hardness_scores_ids = update_hardness(torch.cat(hardness_data['indices']), 
+#                 import ipdb; ipdb.set_trace();
+                hardness_scores_ids = normalize_hardness(torch.cat(hardness_data['indices']), 
                                     hardness_scores, dataloader, torch.cat(hardness_data['labels']))
-#                     import ipdb; ipdb.set_trace();
-                    epoch_data["batch_{}".format(steps)] = copy.deepcopy(hardness_scores_ids)
-                    epoch_data["batch_{}_indices".format(steps)] = index
-                    if prev_mode:
-                        model.train()
+                if epoch%C.get()['hardness']['interval'] == 0 and steps==32:
+                    print("Updating the hardness")
+                    update_hardness(hardness_scores_ids, dataloader)
+                epoch_data["batch_{}".format(steps)] = copy.deepcopy(hardness_scores_ids)
+                epoch_data["batch_{}_indices".format(steps)] = index
+                if prev_mode:
+                    model.train()
                     
 #                     if steps==3:
 #                         break
