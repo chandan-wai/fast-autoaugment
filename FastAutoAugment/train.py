@@ -326,7 +326,12 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
 
         model.train()
         rs = dict()
-        rs['train'] = run_epoch(model, trainloader, criterion, optimizer, desc_default='train', epoch=epoch, writer=writers[0], verbose=(is_master and local_rank <= 0), scheduler=scheduler, ema=ema, wd=C.get()['optimizer']['decay'], tqdm_disabled=tqdm_disabled)
+        rs['train'] = run_epoch(model, trainloader, criterion, optimizer, 
+                                desc_default='train', epoch=epoch, writer=writers[0], 
+                                verbose=(is_master and local_rank <= 0), 
+                                scheduler=scheduler, ema=ema, 
+                                wd=C.get()['optimizer']['decay'], 
+                                tqdm_disabled=tqdm_disabled)
         model.eval()
         
         if C.get().conf.get('hardness') is not None:
@@ -413,6 +418,23 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                         'model': model.state_dict(),
                         'ema': ema.state_dict() if ema is not None else None,
                     }, save_path)
+                    
+            if epoch == max_epoch:
+                # save checkpoint
+                if is_master and save_path:
+                    path_max_epoch = save_path.replace('test.pth', 'max_epoch.pth')
+                    logger.info('save model@%d to %s, err=%.4f' % (epoch, save_path, 1 - rs[metric]['top1']))
+                    torch.save({
+                        'epoch': epoch,
+                        'log': {
+                            'train': rs['train'].get_dict(),
+                            'valid': rs['valid'].get_dict(),
+                            'test': rs['test'].get_dict(),
+                        },
+                        'optimizer': optimizer.state_dict(),
+                        'model': model.state_dict(),
+                        'ema': ema.state_dict() if ema is not None else None,
+                    }, path_max_epoch)    
 
     del model
 
