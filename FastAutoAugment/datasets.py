@@ -1,6 +1,7 @@
 import torchvision
 from collections import defaultdict
 from PIL import Image
+import numpy as np
 from theconf import Config as C
 
 
@@ -96,7 +97,7 @@ class SVHN_mod(torchvision.datasets.SVHN):
         Returns:
             tuple: (image, target) where target is index of the target class.
         """
-        img, target = self.data[index], self.targets[index]
+        img, target = self.data[index], int(self.labels[index])
         
         measure = C.get()['hardness']['aug_measure']
         if measure in self.hardness_scores and index in self.hardness_scores[measure]:
@@ -105,7 +106,7 @@ class SVHN_mod(torchvision.datasets.SVHN):
             hardness_score = 1
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
-        img = Image.fromarray(img)
+        img = Image.fromarray(np.transpose(img, (1, 2, 0)))
 
         if self.transform is not None:
             for t in self.transform.transforms:

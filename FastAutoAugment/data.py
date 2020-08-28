@@ -13,6 +13,7 @@ from torch.utils.data import SubsetRandomSampler, Sampler, Subset, ConcatDataset
 import torch.distributed as dist
 from torchvision.transforms import transforms
 from sklearn.model_selection import StratifiedShuffleSplit
+import numpy as np
 from theconf import Config as C
 import multiprocessing as mp
 
@@ -21,7 +22,7 @@ from FastAutoAugment.augmentations import *
 from FastAutoAugment.common import get_logger
 from FastAutoAugment.imagenet import ImageNet
 from FastAutoAugment.networks.efficientnet_pytorch.model import EfficientNet
-from FastAutoAugment.datasets import CIFAR10_mod
+from FastAutoAugment.datasets import CIFAR10_mod, SVHN_mod
 
 logger = get_logger('Fast AutoAugment')
 logger.setLevel(logging.INFO)
@@ -144,12 +145,14 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         testset = SVHN_mod(root=dataroot, split='test', download=True, transform=transform_test)
     elif dataset == 'reduced_svhn':
         total_trainset = SVHN_mod(root=dataroot, split='train', download=True, transform=transform_train)
+        extraset = SVHN_mod(root=dataroot, split='train', download=True, transform=transform_test)
         sss = StratifiedShuffleSplit(n_splits=1, test_size=73257-1000, random_state=0)  # 1000 trainset
-        sss = sss.split(list(range(len(total_trainset))), total_trainset.targets)
+        sss = sss.split(list(range(len(total_trainset))), total_trainset.labels)
         train_idx, valid_idx = next(sss)
-        targets = [total_trainset.targets[idx] for idx in train_idx]
+        targets = [int(total_trainset.labels[idx]) for idx in train_idx]
         total_trainset = Subset(total_trainset, train_idx)
-        total_trainset.targets = targets
+        extraset = Subset(extraset, train_idx)
+        total_trainset.labels = targets
 
         testset = SVHN_mod(root=dataroot, split='test', download=True, transform=transform_test)
     elif dataset == 'imagenet':
