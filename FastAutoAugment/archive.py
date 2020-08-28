@@ -119,6 +119,37 @@ def autoaug_paper_cifar10():
 
 
 @autoaug2arsaug
+def autoaug_paper_svhn():
+    return [
+        [('ShearX', 0.9, 4), ('Invert', 0.2, 3)],
+        [('ShearY', 0.9, 8), ('Invert', 0.7, 5)],
+        [('Equalize', 0.6, 5), ('Solarize', 0.6, 6)],
+        [('Invert', 0.9, 3), ('Equalize', 0.6, 3)],
+        [('Equalize', 0.6, 1), ('Rotate', 0.9, 3)],
+        [('ShearX', 0.9, 4) ('AutoContrast', 0.8, 3)],
+        [('ShearY', 0.9, 8), ('Invert', 0.4, 5)],
+        [('ShearY', 0.9, 5), ('Solarize', 0.2, 6)],
+        [('Invert', 0.9, 6), ('AutoContrast', 0.8, 1)],
+        [('Equalize', 0.6, 3), ('Rotate', 0.9, 3)],
+        [('ShearX', 0.9, 4), ('Solarize', 0.3, 3)],
+        [('ShearY', 0.8, 8), ('Invert', 0.7, 4)],
+        [('Equalize', 0.9, 5), ('TranslateYAbs', 0.6, 6)],
+        [('Invert', 0.9, 4), ('Equalize', 0.6, 7)],
+        [('Contrast', 0.3, 3), ('Rotate', 0.8, 4)],
+        [('Invert', 0.8, 5), ('TranslateYAbs', 0.0, 2)],
+        [('ShearY', 0.7, 6), ('Solarize', 0.8, 4)],
+        [('Invert', 0.6, 4), ('Rotate', 0.8, 4)],
+        [('ShearY', 0.3, 7), ('TranslateXAbs', 0.9, 3)],
+        [('ShearX', 0.1, 6), ('Invert', 0.6, 5)],
+        [('Solarize', 0.7, 2), ('TranslateYAbs', 0.6, 7)],
+        [('ShearY', 0.8, 4), ('Invert', 0.8, 8)],
+        [('ShearX', 0.7, 9), ('TranslateYAbs', 0.8, 3)],
+        [('ShearY', 0.8, 5), ('AutoContrast', 0.7, 3)],
+        [('ShearX', 0.7, 2), ('Invert', 0.1, 5)],
+    ]
+
+
+@autoaug2arsaug
 def autoaug_policy():
     """AutoAugment policies found on Cifar."""
     exp0_0 = [

@@ -103,6 +103,8 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
             transform_train.transforms.insert(0, Augmentation(arsaug_policy()))
         elif C.get()['aug'] == 'autoaug_cifar10':
             transform_train.transforms.insert(0, Augmentation(autoaug_paper_cifar10()))
+        elif C.get()['aug'] == 'autoaug_svhn':
+            transform_train.transforms.insert(0, Augmentation(autoaug_paper_svhn()))
         elif C.get()['aug'] == 'autoaug_extend':
             transform_train.transforms.insert(0, Augmentation(autoaug_policy()))
         elif C.get()['aug'] in ['default']:
@@ -132,15 +134,16 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
 
         testset = CIFAR10_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'cifar100':
-        total_trainset = torchvision.datasets.CIFAR100(root=dataroot, train=True, download=True, transform=transform_train)
-        testset = torchvision.datasets.CIFAR100(root=dataroot, train=False, download=True, transform=transform_test)
+        total_trainset = CIFAR100_mod(root=dataroot, train=True, download=True, transform=transform_train)
+        extraset = CIFAR100_mod(root=dataroot, train=True, download=True, transform=transform_test)
+        testset = CIFAR100_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'svhn':
-        trainset = torchvision.datasets.SVHN(root=dataroot, split='train', download=True, transform=transform_train)
-        extraset = torchvision.datasets.SVHN(root=dataroot, split='extra', download=True, transform=transform_train)
+        trainset = SVHN_mod(root=dataroot, split='train', download=True, transform=transform_train)
+        extraset = SVHN_mod(root=dataroot, split='extra', download=True, transform=transform_train)
         total_trainset = ConcatDataset([trainset, extraset])
-        testset = torchvision.datasets.SVHN(root=dataroot, split='test', download=True, transform=transform_test)
+        testset = SVHN_mod(root=dataroot, split='test', download=True, transform=transform_test)
     elif dataset == 'reduced_svhn':
-        total_trainset = torchvision.datasets.SVHN(root=dataroot, split='train', download=True, transform=transform_train)
+        total_trainset = SVHN_mod(root=dataroot, split='train', download=True, transform=transform_train)
         sss = StratifiedShuffleSplit(n_splits=1, test_size=73257-1000, random_state=0)  # 1000 trainset
         sss = sss.split(list(range(len(total_trainset))), total_trainset.targets)
         train_idx, valid_idx = next(sss)
@@ -148,7 +151,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         total_trainset = Subset(total_trainset, train_idx)
         total_trainset.targets = targets
 
-        testset = torchvision.datasets.SVHN(root=dataroot, split='test', download=True, transform=transform_test)
+        testset = SVHN_mod(root=dataroot, split='test', download=True, transform=transform_test)
     elif dataset == 'imagenet':
         total_trainset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), transform=transform_train)
         testset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), split='val', transform=transform_test)
