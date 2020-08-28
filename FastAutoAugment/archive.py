@@ -126,7 +126,7 @@ def autoaug_paper_svhn():
         [('Equalize', 0.6, 5), ('Solarize', 0.6, 6)],
         [('Invert', 0.9, 3), ('Equalize', 0.6, 3)],
         [('Equalize', 0.6, 1), ('Rotate', 0.9, 3)],
-        [('ShearX', 0.9, 4) ('AutoContrast', 0.8, 3)],
+        [('ShearX', 0.9, 4), ('AutoContrast', 0.8, 3)],
         [('ShearY', 0.9, 8), ('Invert', 0.4, 5)],
         [('ShearY', 0.9, 5), ('Solarize', 0.2, 6)],
         [('Invert', 0.9, 6), ('AutoContrast', 0.8, 1)],
