@@ -13,3 +13,5 @@ psutil
 requests
 pandas
 ipdb
+wandb
+seaborn
