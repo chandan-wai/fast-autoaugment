@@ -22,7 +22,7 @@ from FastAutoAugment.augmentations import *
 from FastAutoAugment.common import get_logger
 from FastAutoAugment.imagenet import ImageNet
 from FastAutoAugment.networks.efficientnet_pytorch.model import EfficientNet
-from FastAutoAugment.datasets import CIFAR10_mod, SVHN_mod
+from FastAutoAugment.datasets import CIFAR10_mod, CIFAR100_mod, SVHN_mod
 
 logger = get_logger('Fast AutoAugment')
 logger.setLevel(logging.INFO)
