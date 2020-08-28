@@ -3,7 +3,7 @@ model:
 dataset: reduced_svhn
 drop_last: False
 aug: autoaug_svhn
-cutout: 16
+cutout: 0
 batch: 128
 epoch: 200
 lr: 0.1

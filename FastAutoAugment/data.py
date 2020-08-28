@@ -105,6 +105,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         elif C.get()['aug'] == 'autoaug_cifar10':
             transform_train.transforms.insert(0, Augmentation(autoaug_paper_cifar10()))
         elif C.get()['aug'] == 'autoaug_svhn':
+            print("Using SVHN AA policy")
             transform_train.transforms.insert(0, Augmentation(autoaug_paper_svhn()))
         elif C.get()['aug'] == 'autoaug_extend':
             transform_train.transforms.insert(0, Augmentation(autoaug_policy()))
