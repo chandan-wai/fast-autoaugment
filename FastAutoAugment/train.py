@@ -77,19 +77,24 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
                 max_value = classwise_data[label]['max']
                 if isinstance(dataloader.dataset, Subset):
                     dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.dataset.hardness_scores['absolute'+key].update({idx:val})
                 else:
                     dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.hardness_scores['absolute'+key].update({idx:val})
         else:
             min_value = min(value)
             max_value = max(value)
             for idx, val in zip(indices, value):
                 if isinstance(dataloader.dataset, Subset):
                     dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.dataset.hardness_scores['absolute'+key].update({idx:val})
                 else:
                     dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.hardness_scores['absolute'+key].update({idx:val})
 
                     
 def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, writer=None, verbose=1, scheduler=None, is_master=True, ema=None, wd=0.0, tqdm_disabled=False, hardness_measures=None):
+#     import ipdb; ipdb.set_trace();
     if verbose:
         loader = tqdm(loader, disable=tqdm_disabled)
         loader.set_description('[%s %04d/%04d]' % (desc_default, epoch, C.get()['epoch']))
@@ -150,7 +155,7 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
         if scheduler is not None:
             scheduler.step(epoch - 1 + float(steps) / total_steps)
         
-        if desc_default in ['valid', '*test']:
+        if desc_default in ['train', 'valid', '*test']:
             epoch_data['{}_predictions'.format(desc_default)].append(preds)
             epoch_data['{}_labels'.format(desc_default)].append(label)
             
@@ -195,9 +200,15 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
         for key in list(hardness_measures.keys()):
             hardness_scores[key] = np.array([score.item() for score in hardness_scores[key]])
         hardness_data['hardness_scores'] = hardness_scores
+        log_path = save_path.replace('test.pth', 'logs')
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+        log_path = os.path.join(log_path, "hardness_scores_epoch_{}.pt".format(epoch))
+        torch.save(hardness_scores, log_path)
+        
         return hardness_data
     
-    if desc_default in ['valid', '*test']:
+    if desc_default in ['train', 'valid', '*test']:
         log_path = save_path.replace('test.pth', 'logs')
         if not os.path.exists(log_path):
             os.makedirs(log_path)
@@ -207,7 +218,7 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
     return metrics
 
 
-def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metric='last', save_path=None, only_eval=False, local_rank=-1, evaluation_interval=5):
+def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metric='last', save_path=None, only_eval=False, local_rank=-1, evaluation_interval=1):
     total_batch = C.get()["batch"]
     if local_rank >= 0:
         dist.init_process_group(backend='nccl', init_method='env://', world_size=int(os.environ['WORLD_SIZE']))
@@ -372,6 +383,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                                                 None, desc_default='hardness_run', epoch=epoch, 
                                                 writer=writers[1], verbose=is_master,  
                                                 tqdm_disabled=tqdm_disabled, hardness_measures=hardness_measures)
+#                         import ipdb; ipdb.set_trace();
                         update_hardness(torch.cat(rs['hardness_run']['indices']), 
                                         rs['hardness_run']['hardness_scores'], 
                                         trainloader, 
@@ -484,7 +496,7 @@ if __name__ == '__main__':
     parser.add_argument('--cv-ratio', type=float, default=0.0)
     parser.add_argument('--cv', type=int, default=0)
     parser.add_argument('--local_rank', type=int, default=-1)
-    parser.add_argument('--evaluation-interval', type=int, default=5)
+    parser.add_argument('--evaluation-interval', type=int, default=1)
     parser.add_argument('--only-eval', action='store_true')
     args = parser.parse_args()
 

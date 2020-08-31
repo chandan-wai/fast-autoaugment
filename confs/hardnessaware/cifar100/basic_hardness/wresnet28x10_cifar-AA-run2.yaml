@@ -1,0 +1,40 @@
+model:
+  type: wresnet28_10
+dataset: cifar100
+drop_last: False
+aug: autoaug_cifar10
+cutout: 16
+batch: 128
+epoch: 200
+lr: 0.1
+lr_schedule:
+  type: 'cosine'
+  warmup:
+    multiplier: 1
+    epoch: 5
+optimizer:
+  type: sgd
+  nesterov: True
+  decay: 0.0005
+  ema: 0
+hardness:
+    compute: True
+    interval: 1
+    use: True
+    use_in_cutout: False
+    in_pr: False
+    max_pr: 0.5
+    aug_measure: AVH
+    f_power: 0.77
+    g_power: 1.33
+    pr_power: 1.33
+    classwise_normalization: False
+    measures:
+      - name: AVH
+        params:
+            classwise_normalization: False
+            update_method: minmax_scaling
+      - name: instance_loss
+        params:
+            classwise_normalization: False
+            update_method: minmax_scaling

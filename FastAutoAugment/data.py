@@ -139,6 +139,20 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         total_trainset = CIFAR100_mod(root=dataroot, train=True, download=True, transform=transform_train)
         extraset = CIFAR100_mod(root=dataroot, train=True, download=True, transform=transform_test)
         testset = CIFAR100_mod(root=dataroot, train=False, download=True, transform=transform_test)
+    elif dataset == 'reduced_cifar100':
+        total_trainset = CIFAR100_mod(root=dataroot, train=True, download=True, transform=transform_train)
+        extraset = CIFAR100_mod(root=dataroot, train=True, download=True, transform=transform_test)
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=46000, random_state=0)   # 4000 trainset
+        sss = sss.split(list(range(len(total_trainset))), total_trainset.targets)
+        train_idx, valid_idx = next(sss)
+        targets = [total_trainset.targets[idx] for idx in train_idx]
+        total_trainset = Subset(total_trainset, train_idx)
+        extraset = Subset(extraset, train_idx)
+        assert (extraset.dataset.data == total_trainset.dataset.data).all()
+        total_trainset.targets = targets
+        extraset.targets = targets
+        
+        testset = CIFAR100_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'svhn':
         trainset = SVHN_mod(root=dataroot, split='train', download=True, transform=transform_train)
         extraset = SVHN_mod(root=dataroot, split='extra', download=True, transform=transform_train)
@@ -158,6 +172,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         testset = SVHN_mod(root=dataroot, split='test', download=True, transform=transform_test)
     elif dataset == 'imagenet':
         total_trainset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), transform=transform_train)
+        extraset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), transform=transform_test)
         testset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), split='val', transform=transform_test)
 
         # compatibility
@@ -167,6 +182,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
 #         idx120 = sorted(random.sample(list(range(1000)), k=120))
         idx120 = [16, 23, 52, 57, 76, 93, 95, 96, 99, 121, 122, 128, 148, 172, 181, 189, 202, 210, 232, 238, 257, 258, 259, 277, 283, 289, 295, 304, 307, 318, 322, 331, 337, 338, 345, 350, 361, 375, 376, 381, 388, 399, 401, 408, 424, 431, 432, 440, 447, 462, 464, 472, 483, 497, 506, 512, 530, 541, 553, 554, 557, 564, 570, 584, 612, 614, 619, 626, 631, 632, 650, 657, 658, 660, 674, 675, 680, 682, 691, 695, 699, 711, 734, 736, 741, 754, 757, 764, 769, 770, 780, 781, 787, 797, 799, 811, 822, 829, 830, 835, 837, 842, 843, 845, 873, 883, 897, 900, 902, 905, 913, 920, 925, 937, 938, 940, 941, 944, 949, 959]
         total_trainset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), transform=transform_train)
+        extraset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), transform=transform_test)
         testset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), split='val', transform=transform_test)
 
         # compatibility
@@ -188,6 +204,9 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
             total_trainset.samples[idx] = (total_trainset.samples[idx][0], idx120.index(total_trainset.samples[idx][1]))
         total_trainset = Subset(total_trainset, train_idx)
         total_trainset.targets = targets
+        
+        extraset = Subset(extraset, train_idx)
+        extraset.targets = targets
 
         for idx in range(len(testset.samples)):
             if testset.samples[idx][1] not in idx120:
@@ -233,7 +252,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, 
         num_workers=mp.cpu_count(), pin_memory=True, sampler=train_sampler, drop_last=False)
     extraloader = torch.utils.data.DataLoader(
-        extraset, batch_size=batch, shuffle=True if train_sampler is None else False, 
+        extraset, batch_size=batch, shuffle=False, 
         num_workers=mp.cpu_count(), pin_memory=True, sampler=train_sampler, drop_last=False)
     validloader = torch.utils.data.DataLoader(
         total_trainset, batch_size=batch, shuffle=False, num_workers=mp.cpu_count(), 

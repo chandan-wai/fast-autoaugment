@@ -96,6 +96,7 @@ def num_class(dataset):
         'reduced_cifar10': 10,
         'cifar10.1': 10,
         'cifar100': 100,
+        'reduced_cifar100': 100,
         'svhn': 10,
         'reduced_svhn': 10,
         'imagenet': 1000,
