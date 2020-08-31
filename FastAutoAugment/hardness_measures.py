@@ -16,7 +16,7 @@ class AVH:
         :type targets: Any
         :return: List of AVH values per instance
         """
-#         import ipdb; ipdb.set_trace();
+        import ipdb; ipdb.set_trace();
         weights_list = list(model.state_dict().keys())
         weight_matrix = model.state_dict()[weights_list[-2]]
         cos = CosineSimilarity(dim=1, eps=1e-6)
