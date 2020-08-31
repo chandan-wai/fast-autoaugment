@@ -101,6 +101,7 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
     cnt = 0
     total_steps = len(loader)
     steps = 0
+    epoch_data = defaultdict(list)
     hardness_data = defaultdict(list)
     hardness_scores = defaultdict(list)
     for data, label, index in loader:
@@ -149,6 +150,10 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
         if scheduler is not None:
             scheduler.step(epoch - 1 + float(steps) / total_steps)
         
+        if desc_default in ['valid', '*test']:
+            epoch_data['{}_predictions'.format(desc_default)].append(preds)
+            epoch_data['{}_labels'.format(desc_default)].append(label)
+            
         if desc_default == "hardness_run":
             hardness_data['labels'].append(label)
             hardness_data['indices'].append(index)
@@ -191,6 +196,14 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
             hardness_scores[key] = np.array([score.item() for score in hardness_scores[key]])
         hardness_data['hardness_scores'] = hardness_scores
         return hardness_data
+    
+    if desc_default in ['valid', '*test']:
+        log_path = save_path.replace('test.pth', 'logs')
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+        log_path = os.path.join(log_path, "epoch_{}.pt".format(epoch))
+        torch.save(epoch_data, log_path)
+        
     return metrics
 
 
@@ -358,7 +371,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                         rs['hardness_run'] = run_epoch(model, extraloader, criterion_ce, 
                                                 None, desc_default='hardness_run', epoch=epoch, 
                                                 writer=writers[1], verbose=is_master,  
-                                                tqdm_disabled=tqdm_disabled, hardness_measures)
+                                                tqdm_disabled=tqdm_disabled, hardness_measures=hardness_measures)
                         update_hardness(torch.cat(rs['hardness_run']['indices']), 
                                         rs['hardness_run']['hardness_scores'], 
                                         trainloader, 
