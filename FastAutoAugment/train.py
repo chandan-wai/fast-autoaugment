@@ -8,6 +8,7 @@ import json
 import logging
 import math
 import os
+import bisect
 import numpy as np
 from collections import OrderedDict
 from collections import defaultdict
@@ -16,7 +17,7 @@ import torch
 from torch import nn, optim
 from torch.nn.parallel.data_parallel import DataParallel
 from torch.nn.parallel import DistributedDataParallel
-from torch.utils.data import Subset
+from torch.utils.data import Subset, ConcatDataset
 import torch.distributed as dist
 
 import pandas as pd
@@ -78,6 +79,15 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
                 if isinstance(dataloader.dataset, Subset):
                     dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
                     dataloader.dataset.dataset.hardness_scores['absolute'+key].update({idx:val})
+                elif isinstance(dataloader.dataset, ConcatDataset):
+                    cumulative_sizes = dataloader.dataset.cumulative_sizes
+                    dataset_idx = bisect.bisect_right(cumulative_sizes, idx)
+                    if dataset_idx == 0:
+                        sample_idx = idx
+                    else:
+                        sample_idx = idx - cumulative_sizes[dataset_idx - 1]
+                    dataloader.dataset.datasets[dataset_idx].hardness_scores[key].update({sample_idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.datasets[dataset_idx].hardness_scores['absolute'+key].update({sample_idx:val})
                 else:
                     dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
                     dataloader.dataset.hardness_scores['absolute'+key].update({idx:val})
@@ -88,6 +98,15 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
                 if isinstance(dataloader.dataset, Subset):
                     dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
                     dataloader.dataset.dataset.hardness_scores['absolute'+key].update({idx:val})
+                elif isinstance(dataloader.dataset, ConcatDataset):
+                    cumulative_sizes = dataloader.dataset.cumulative_sizes
+                    dataset_idx = bisect.bisect_right(cumulative_sizes, idx)
+                    if dataset_idx == 0:
+                        sample_idx = idx
+                    else:
+                        sample_idx = idx - cumulative_sizes[dataset_idx - 1]
+                    dataloader.dataset.datasets[dataset_idx].hardness_scores[key].update({sample_idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.datasets[dataset_idx].hardness_scores['absolute'+key].update({sample_idx:val})
                 else:
                     dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
                     dataloader.dataset.hardness_scores['absolute'+key].update({idx:val})
@@ -205,7 +224,7 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
             os.makedirs(log_path)
         log_path = os.path.join(log_path, "hardness_scores_epoch_{}.pt".format(epoch))
         torch.save(hardness_scores, log_path)
-        
+#         import ipdb; ipdb.set_trace();
         return hardness_data
     
     if desc_default in ['train', 'valid', '*test']:
@@ -388,7 +407,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                                         rs['hardness_run']['hardness_scores'], 
                                         trainloader, 
                                         torch.cat(rs['hardness_run']['labels']))
-                    
+#                         import ipdb; ipdb.set_trace();
 #                     hardness_scores = dict()
 #                     for key in list(hardness_measures.keys()):
 #                         if key == "AVH":
