@@ -155,8 +155,11 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0, multinode
         testset = CIFAR100_mod(root=dataroot, train=False, download=True, transform=transform_test)
     elif dataset == 'svhn':
         trainset = SVHN_mod(root=dataroot, split='train', download=True, transform=transform_train)
-        extraset = SVHN_mod(root=dataroot, split='extra', download=True, transform=transform_train)
-        total_trainset = ConcatDataset([trainset, extraset])
+        extraset_orig = SVHN_mod(root=dataroot, split='extra', download=True, transform=transform_train)
+        total_trainset = ConcatDataset([trainset, extraset_orig])
+        trainset2 = SVHN_mod(root=dataroot, split='train', download=True, transform=transform_test)
+        extraset_orig2 = SVHN_mod(root=dataroot, split='extra', download=True, transform=transform_test)
+        extraset = ConcatDataset([trainset2, extraset_orig2])
         testset = SVHN_mod(root=dataroot, split='test', download=True, transform=transform_test)
     elif dataset == 'reduced_svhn':
         total_trainset = SVHN_mod(root=dataroot, split='train', download=True, transform=transform_train)
