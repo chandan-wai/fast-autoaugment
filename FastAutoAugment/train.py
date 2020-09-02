@@ -73,28 +73,28 @@ def update_hardness(indices, hardness_scores, dataloader, labels):
     for key, value in hardness_scores.items():
         if C.get()['hardness']['classwise_normalization']:
             classwise_data = find_classwise_data(hardness_scores[key], labels)
-            for idx, val, label in zip(indices, value, labels):
+            for i, (idx, val, label) in enumerate(zip(indices, value, labels)):
                 min_value = classwise_data[label]['min']
                 max_value = classwise_data[label]['max']
                 if isinstance(dataloader.dataset, Subset):
                     dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
                     dataloader.dataset.dataset.hardness_scores['absolute'+key].update({idx:val})
                 elif isinstance(dataloader.dataset, ConcatDataset):
-                    cumulative_sizes = dataloader.dataset.cumulative_sizes
-                    dataset_idx = bisect.bisect_right(cumulative_sizes, idx)
-                    if dataset_idx == 0:
-                        sample_idx = idx
+                    # assuming we have concatenation of only 2 datsets 
+                    if i==idx:
+                        dataset_idx = 0
                     else:
-                        sample_idx = idx - cumulative_sizes[dataset_idx - 1]
-                    dataloader.dataset.datasets[dataset_idx].hardness_scores[key].update({sample_idx:(val-min_value)/(max_value-min_value+epsilon)})
-                    dataloader.dataset.datasets[dataset_idx].hardness_scores['absolute'+key].update({sample_idx:val})
+                        dataset_idx = 1
+                        
+                    dataloader.dataset.datasets[dataset_idx].hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
+                    dataloader.dataset.datasets[dataset_idx].hardness_scores['absolute'+key].update({idx:val})
                 else:
                     dataloader.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
                     dataloader.dataset.hardness_scores['absolute'+key].update({idx:val})
         else:
             min_value = min(value)
             max_value = max(value)
-            for idx, val in zip(indices, value):
+            for i, (idx, val) in enumerate(zip(indices, value)):
                 if isinstance(dataloader.dataset, Subset):
                     dataloader.dataset.dataset.hardness_scores[key].update({idx:(val-min_value)/(max_value-min_value+epsilon)})
                     dataloader.dataset.dataset.hardness_scores['absolute'+key].update({idx:val})
@@ -224,7 +224,7 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
             os.makedirs(log_path)
         log_path = os.path.join(log_path, "hardness_scores_epoch_{}.pt".format(epoch))
         torch.save(hardness_scores, log_path)
-        import ipdb; ipdb.set_trace();
+#         import ipdb; ipdb.set_trace();
         return hardness_data
     
     if desc_default in ['train', 'valid', '*test']:
@@ -386,12 +386,12 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
 
         model.train()
         rs = dict()
-#         rs['train'] = run_epoch(model, trainloader, criterion, optimizer, 
-#                                 desc_default='train', epoch=epoch, writer=writers[0], 
-#                                 verbose=(is_master and local_rank <= 0), 
-#                                 scheduler=scheduler, ema=ema, 
-#                                 wd=C.get()['optimizer']['decay'], 
-#                                 tqdm_disabled=tqdm_disabled)
+        rs['train'] = run_epoch(model, trainloader, criterion, optimizer, 
+                                desc_default='train', epoch=epoch, writer=writers[0], 
+                                verbose=(is_master and local_rank <= 0), 
+                                scheduler=scheduler, ema=ema, 
+                                wd=C.get()['optimizer']['decay'], 
+                                tqdm_disabled=tqdm_disabled)
         model.eval()
         
         if C.get().conf.get('hardness') is not None:
@@ -407,7 +407,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
                                         rs['hardness_run']['hardness_scores'], 
                                         trainloader, 
                                         torch.cat(rs['hardness_run']['labels']))
-                        import ipdb; ipdb.set_trace();
+#                         import ipdb; ipdb.set_trace();
 #                     hardness_scores = dict()
 #                     for key in list(hardness_measures.keys()):
 #                         if key == "AVH":
