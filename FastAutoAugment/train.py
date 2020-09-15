@@ -177,6 +177,7 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
         if desc_default in ['train', 'valid', '*test']:
             epoch_data['{}_predictions'.format(desc_default)].append(preds)
             epoch_data['{}_labels'.format(desc_default)].append(label)
+            epoch_data['{}_indices'.format(desc_default)].append(index)
             
         if desc_default == "hardness_run":
             hardness_data['labels'].append(label)
